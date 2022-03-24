@@ -254,6 +254,11 @@
 #define BAT_LVL_ADDR					0x70000
 #endif
 
+#define TIMER_INIT_FLAG                 0
+#define TIMER_RESET_FLAG                1
+#define TIMER_START_FLAG                2
+#define TIMER_STOP_FLAG                 3
+
 #define BLE_GAP_DATA_LENGTH_DEFAULT     27          //!< The stack's default data length.
 #define BLE_GAP_DATA_LENGTH_MAX         251         //!< Maximum data length.
 
@@ -274,7 +279,7 @@ uint8_t i2c_evt_flag = DEFAULT_FLAG;
 volatile uint8_t ble_adv_switch_flag = BLE_DEF;
 static volatile uint8_t ble_conn_flag = BLE_DEF;
 static volatile uint8_t trans_info_flag = UART_DEF;
-static volatile uint8_t ble_reset_flag=0;
+static volatile uint8_t ble_trans_timer_flag=TIMER_INIT_FLAG;
 static uint8_t mac_ascii[12];
 static uint8_t mac[6]={0x42,0x13,0xc7,0x98,0x95,0x1a}; //Device MAC address
 static char ble_adv_name[ADV_NAME_LENGTH];
@@ -610,18 +615,18 @@ void m_100ms_timeout_hander(void * p_context)
 {
     UNUSED_PARAMETER(p_context);
         
-    if(1 == ble_reset_flag)
+    if(TIMER_RESET_FLAG == ble_trans_timer_flag)
     {
         timeout_longcnt = 0; 
         timeout_count=1;
-        ble_reset_flag = 0;
-        NRF_LOG_INFO("1-timer start.");
+        ble_trans_timer_flag = TIMER_INIT_FLAG;
+        NRF_LOG_INFO("1-timer reset.");
     }
-    else if(2 == ble_reset_flag)    
+    else if(TIMER_START_FLAG == ble_trans_timer_flag)    
     {
         timeout_count = 0;
         timeout_longcnt=1;
-        ble_reset_flag = 0;
+        ble_trans_timer_flag = TIMER_INIT_FLAG;
         NRF_LOG_INFO("2-timer start.");
     }
     
@@ -632,7 +637,7 @@ void m_100ms_timeout_hander(void * p_context)
         {    
             NRF_LOG_INFO("1-timer timeout.");
             timeout_count = 0;
-            ble_reset_flag = 0;
+            ble_trans_timer_flag = TIMER_INIT_FLAG;
             rcv_head_flag = DATA_INIT;
         }
     }
@@ -643,7 +648,7 @@ void m_100ms_timeout_hander(void * p_context)
         {
             NRF_LOG_INFO("2-timer timeout.");
             timeout_longcnt=0;
-            ble_reset_flag = 0;
+            ble_trans_timer_flag = TIMER_INIT_FLAG;
             rcv_head_flag = DATA_INIT;
         }
     }
@@ -1088,11 +1093,11 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
                     //erase ST flash about 4 second
                     if(data_recived_buf[3] == 0x00 && data_recived_buf[4] == 0x06)
                     {
-                        ble_reset_flag = 2;
+                        ble_trans_timer_flag = TIMER_START_FLAG;
                     }
                     else
                     {
-                        ble_reset_flag = 1;
+                        ble_trans_timer_flag = TIMER_RESET_FLAG;
                     }
                     msg_len=(uint32_t)((data_recived_buf[5] << 24) +
                              (data_recived_buf[6] << 16) +
@@ -1131,7 +1136,7 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
                     msg_len -= pad;
                 }
                 ble_evt_flag = BLE_RCV_DATA;
-                ble_reset_flag = 1;
+                ble_trans_timer_flag = TIMER_RESET_FLAG;
             }
             else
             {
