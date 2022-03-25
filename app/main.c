@@ -1791,9 +1791,28 @@ static void power_management_init(void)
 #else
 void forwarding_to_st_data(void)
 {
+    uint8_t send_spi_offset=0;
+
     if(BLE_RCV_DATA == ble_evt_flag)
     {
-        usr_spi_write(data_recived_buf,data_recived_len);
+        if(data_recived_len != 0)
+        {
+            while(data_recived_len>=64)
+            {
+                usr_spi_write(data_recived_buf+send_spi_offset,64);
+                send_spi_offset += 64;
+                data_recived_len -= 64;
+            }
+            if(data_recived_len)
+            {
+                usr_spi_write(data_recived_buf+send_spi_offset,64);
+                data_recived_len = 0;
+                send_spi_offset = 0;
+            }
+        }else{
+            usr_spi_write(data_recived_buf,64);
+        }
+        
         i2c_evt_flag = SEND_SPI_DATA;
         RST_ONE_SECNOD_COUNTER();
         NRF_LOG_HEXDUMP_INST_INFO("recv data",data_recived_buf,data_recived_len);
