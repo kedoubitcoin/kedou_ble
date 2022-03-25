@@ -113,8 +113,8 @@ extern "C" {
 
 //end HaoBTC
 
-#define RX_PIN_NUMBER  8
-#define TX_PIN_NUMBER  6
+#define RX_PIN_NUMBER  11
+#define TX_PIN_NUMBER  12
 #define CTS_PIN_NUMBER UART_PIN_DISCONNECTED
 #define RTS_PIN_NUMBER UART_PIN_DISCONNECTED
 #define HWFC           false
