@@ -275,7 +275,7 @@ nrf_drv_wdt_channel_id m_channel_id;
 
 static volatile uint8_t one_second_counter=0;
 static volatile uint8_t ble_evt_flag = BLE_DEFAULT;
-uint8_t i2c_evt_flag = DEFAULT_FLAG;
+uint8_t spi_evt_flag = DEFAULT_FLAG;
 volatile uint8_t ble_adv_switch_flag = BLE_DEF;
 static volatile uint8_t ble_conn_flag = BLE_DEF;
 static volatile uint8_t trans_info_flag = UART_DEF;
@@ -1813,7 +1813,7 @@ void forwarding_to_st_data(void)
             usr_spi_write(data_recived_buf,64);
         }
         
-        i2c_evt_flag = SEND_SPI_DATA;
+        spi_evt_flag = SEND_SPI_DATA;
         RST_ONE_SECNOD_COUNTER();
         NRF_LOG_HEXDUMP_INST_INFO("recv data",data_recived_buf,data_recived_len);
     }
@@ -1872,7 +1872,7 @@ static void phone_resp_data(void)
     uint32_t counter = 0;
     
     read_st_resp_data();
-    i2c_evt_flag = READ_SPI_HEAD;
+    spi_evt_flag = READ_SPI_HEAD;
     while (false == data_recived_flag)
     {
         counter++;
@@ -1881,10 +1881,10 @@ static void phone_resp_data(void)
             return;
     }
     data_recived_flag = false;
-    i2c_evt_flag = READ_SPI_DATA;
+    spi_evt_flag = READ_SPI_DATA;
     //response data
     ble_resp_data();
-    i2c_evt_flag = DEFAULT_FLAG;
+    spi_evt_flag = DEFAULT_FLAG;
     RST_ONE_SECNOD_COUNTER();
 }
 
