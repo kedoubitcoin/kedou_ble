@@ -27,7 +27,7 @@ void usr_spim_init(void)
     driver_spi_config.miso_pin = TOUCH_SPI2_MISO_IO;
     driver_spi_config.mosi_pin = TOUCH_SPI2_MOSI_IO;
     driver_spi_config.sck_pin = TOUCH_SPI2_CLK_IO;
-    driver_spi_config.frequency = NRF_SPIM_FREQ_2M;
+    driver_spi_config.frequency = NRF_SPIM_FREQ_4M;
     err_code = nrfx_spim_init(&m_spim_master, &driver_spi_config, spi_event_handler, NULL);
     APP_ERROR_CHECK(err_code);
 }
