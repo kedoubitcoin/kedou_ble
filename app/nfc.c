@@ -68,6 +68,8 @@
 #define MAX_APDU_LEN      1024   /**< Maximal APDU length, Adafruit limitation. */
 //#define HEADER_FIELD_SIZE 1      /**< Header field size. */
 #define HEADER_FIELD_SIZE 0                 /**< no header */    
+#define PACKAGE_LENTH     64
+#define HEAD_LENTH        9
 
 static bool multi_package=false;
 
@@ -83,7 +85,7 @@ bool nfc_multi_packet=false;
 bool data_recived_flag=false;
 uint8_t data_recived_buf[APDU_BUFF_SIZE];
 uint16_t data_recived_len=0;
-extern uint8_t i2c_evt_flag;
+extern uint8_t spi_evt_flag;
 
 void apdu_command(const uint8_t *p_buf,uint32_t data_len);
 bool apdu_cmd =false;
@@ -300,7 +302,7 @@ static void nfc_callback(void          * context,
 #endif
             break;
         case NFC_T4T_EVENT_DATA_IND:
-			i2c_evt_flag = 0;
+			spi_evt_flag = 0;
             if (dataLength > APDU_BUFF_SIZE)
             {
                 APP_ERROR_HANDLER(NRF_ERROR_NO_MEM);
@@ -367,44 +369,43 @@ void nfc_disable(void)
 }
 void read_st_resp_data(void)
 {
-    uint32_t len;
-    static uint32_t data_len =0;
+    uint32_t receive_offset=0;
+    uint32_t data_len =0;
     
-    if(nrf_gpio_pin_read(TWI_STATUS_GPIO)==1)//can read
+    if(nrf_gpio_pin_read(TWI_STATUS_GPIO)==0)
     {
-        usr_spi_read(data_recived_buf,3);
-        data_recived_len = 3;
+        usr_spi_read(data_recived_buf,64);
+        data_recived_len += PACKAGE_LENTH;
+        receive_offset = PACKAGE_LENTH;
+        
         if(data_recived_buf[0] == '?' && data_recived_buf[1] == '#' && data_recived_buf[2] == '#')
         {
-            usr_spi_read(data_recived_buf+data_recived_len,6);//read id+len bytes len
-            //
-            data_recived_len += 6;
             data_len = ((uint32_t)data_recived_buf[5] << 24) + (data_recived_buf[6] << 16) + (data_recived_buf[7] << 8) + data_recived_buf[8];
-            len=data_len>255?255:data_len;
-            if(len > 0)
-            {
-                usr_spi_read(data_recived_buf+data_recived_len,len);//read id+len bytes len
-                data_len-=len;
-                data_recived_len+=len;
-            }
-            else
+            if(data_len<=(PACKAGE_LENTH - HEAD_LENTH))
             {
                 data_recived_flag = true;
-            }
-            //
-            len=data_len>255?255:data_len;
-            if(len>0)
-            {
-                usr_spi_read(data_recived_buf+data_recived_len,len);//read id+len bytes len
-                data_len-=len;
-                data_recived_len+=len;
-            }
-            else
-            {
+                data_len = 0;
+                receive_offset = 0;
+            }else{
+                data_len = (data_len-(PACKAGE_LENTH - HEAD_LENTH));
+                
+                while(data_len>=63){
+                    usr_spi_read(data_recived_buf+receive_offset,64);
+                    data_len -=63;
+                    receive_offset +=64;
+                    data_recived_len += PACKAGE_LENTH;
+                }
+                if(data_len)
+                {
+                    usr_spi_read(data_recived_buf+receive_offset,64);
+                    data_recived_len += PACKAGE_LENTH;
+                    data_len = 0;
+                    receive_offset = 0;
+                }
                 data_recived_flag = true;
             }
+            
         }
-        
     }
 }
 static void apdu_command(const uint8_t *p_buf,uint32_t data_len)
