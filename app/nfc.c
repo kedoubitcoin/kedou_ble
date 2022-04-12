@@ -377,7 +377,7 @@ void read_st_resp_data(void)
         usr_spi_read(data_recived_buf,64);
         data_recived_len += PACKAGE_LENTH;
         receive_offset = PACKAGE_LENTH;
-        
+NRF_LOG_INFO("<<<ST %x %x %x\n",data_recived_buf[0], data_recived_buf[1], data_recived_buf[2]);     
         if(data_recived_buf[0] == '?' && data_recived_buf[1] == '#' && data_recived_buf[2] == '#')
         {
             data_len = ((uint32_t)data_recived_buf[5] << 24) + (data_recived_buf[6] << 16) + (data_recived_buf[7] << 8) + data_recived_buf[8];
