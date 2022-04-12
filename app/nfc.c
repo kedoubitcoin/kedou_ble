@@ -375,7 +375,6 @@ void read_st_resp_data(void)
     if(nrf_gpio_pin_read(TWI_STATUS_GPIO)==0)
     {
         usr_spi_read(data_recived_buf,64);
-        data_recived_len += PACKAGE_LENTH;
         receive_offset = PACKAGE_LENTH;
         
         if(data_recived_buf[0] == '?' && data_recived_buf[1] == '#' && data_recived_buf[2] == '#')
@@ -383,10 +382,12 @@ void read_st_resp_data(void)
             data_len = ((uint32_t)data_recived_buf[5] << 24) + (data_recived_buf[6] << 16) + (data_recived_buf[7] << 8) + data_recived_buf[8];
             if(data_len<=(PACKAGE_LENTH - HEAD_LENTH))
             {
+                data_recived_len = data_len+HEAD_LENTH;
                 data_recived_flag = true;
                 data_len = 0;
                 receive_offset = 0;
             }else{
+                data_recived_len += PACKAGE_LENTH;
                 data_len = (data_len-(PACKAGE_LENTH - HEAD_LENTH));
                 
                 while(data_len>=63){
@@ -398,7 +399,7 @@ void read_st_resp_data(void)
                 if(data_len)
                 {
                     usr_spi_read(data_recived_buf+receive_offset,64);
-                    data_recived_len += PACKAGE_LENTH;
+                    data_recived_len += data_len;
                     data_len = 0;
                     receive_offset = 0;
                 }
