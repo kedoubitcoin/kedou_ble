@@ -9,7 +9,7 @@ ret_code_t usr_power_init(void)
     NRF_LOG_INFO("Init twi master.");
     axp216_init();
     NRF_LOG_INFO("Init axp216 chip.");
-    nrf_delay_ms(100);
+    nrf_delay_ms(2000);
     //close_all_power();
     open_all_power();
 #if 0

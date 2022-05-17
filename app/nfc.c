@@ -85,6 +85,9 @@ bool nfc_multi_packet=false;
 bool data_recived_flag=false;
 uint8_t data_recived_buf[APDU_BUFF_SIZE];
 uint16_t data_recived_len=0;
+uint16_t data_remaining_len = 0;
+uint16_t data_recived_offset = 0;
+
 extern uint8_t spi_evt_flag;
 
 void apdu_command(const uint8_t *p_buf,uint32_t data_len);
@@ -367,48 +370,61 @@ void nfc_disable(void)
 {
     nfc_t4t_emulation_stop();
 }
+void poll_st_resp_data()
+{
+    if (data_remaining_len > 63)
+    {
+        usr_spi_read(data_recived_buf + data_recived_offset, 64);
+        memmove(data_recived_buf + data_recived_offset, data_recived_buf + data_recived_offset + 1, 63);
+        data_remaining_len -= 63;
+        data_recived_offset += 63;
+        data_recived_len += 63;
+        return;
+    }
+
+    if (data_remaining_len)
+    {
+        usr_spi_read(data_recived_buf + data_recived_offset, 64);
+        memmove(data_recived_buf + data_recived_offset, data_recived_buf + data_recived_offset + 1, 63);
+        data_recived_len += data_remaining_len;
+        data_remaining_len = 0;
+        data_recived_offset = 0;
+        data_recived_flag = true;
+     }
+}
+
 void read_st_resp_data(void)
 {
     uint32_t receive_offset=0;
     uint32_t data_len =0;
-    
-    if(nrf_gpio_pin_read(TWI_STATUS_GPIO)==0)
+
+    if (nrf_gpio_pin_read(TWI_STATUS_GPIO) == 0)
     {
-        usr_spi_read(data_recived_buf,64);
+        if (data_remaining_len) {
+            poll_st_resp_data();
+            return;
+        }
+
+        usr_spi_read(data_recived_buf, 64);
         receive_offset = PACKAGE_LENTH;
-        
         if(data_recived_buf[0] == '?' && data_recived_buf[1] == '#' && data_recived_buf[2] == '#')
         {
             data_len = ((uint32_t)data_recived_buf[5] << 24) + (data_recived_buf[6] << 16) + (data_recived_buf[7] << 8) + data_recived_buf[8];
-            if(data_len<=(PACKAGE_LENTH - HEAD_LENTH))
+            if (data_len <= (PACKAGE_LENTH - HEAD_LENTH))
             {
-                data_recived_len = data_len+HEAD_LENTH;
+                data_recived_len = data_len + HEAD_LENTH;
                 data_recived_flag = true;
                 data_len = 0;
                 receive_offset = 0;
-            }else{
+            } else {
                 data_recived_len += PACKAGE_LENTH;
-                data_len = (data_len-(PACKAGE_LENTH - HEAD_LENTH));
-                
-                while(data_len>=63){
-                    usr_spi_read(data_recived_buf+receive_offset,64);
-                    data_len -=63;
-                    receive_offset +=64;
-                    data_recived_len += PACKAGE_LENTH;
-                }
-                if(data_len)
-                {
-                    usr_spi_read(data_recived_buf+receive_offset,64);
-                    data_recived_len += data_len;
-                    data_len = 0;
-                    receive_offset = 0;
-                }
-                data_recived_flag = true;
+                data_remaining_len = data_len - (PACKAGE_LENTH - HEAD_LENTH);
+                data_recived_offset = receive_offset;
             }
-            
         }
     }
 }
+
 static void apdu_command(const uint8_t *p_buf,uint32_t data_len)
 {
     static bool reading = false;

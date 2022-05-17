@@ -1873,13 +1873,10 @@ static void phone_resp_data(void)
     
     read_st_resp_data();
     spi_evt_flag = READ_SPI_HEAD;
-    while (false == data_recived_flag)
-    {
-        counter++;
-        nrf_delay_ms(1);
-        if (counter > 500)
-            return;
-    }
+
+    if (false == data_recived_flag)
+        return;
+
     data_recived_flag = false;
     spi_evt_flag = READ_SPI_DATA;
     //response data
@@ -1915,7 +1912,7 @@ void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
     switch(pin)
     {
         case SLAVE_SPI_RSP_IO:
-            if(action == NRF_GPIOTE_POLARITY_HITOLO){
+            if(action == NRF_GPIOTE_POLARITY_TOGGLE){
                 phone_resp_data();
             }            
             break;
@@ -2018,11 +2015,11 @@ static void system_init()
     gpio_init();
     usr_rtc_init();
     usr_spim_init();
+    ret_code_t err_code = usr_power_init();
+    APP_ERROR_CHECK(err_code);
 #ifdef UART_TRANS
     usr_uart_init();
 #endif
-    ret_code_t err_code = usr_power_init();
-    APP_ERROR_CHECK(err_code);
 }
 
 /**@brief Function for starting advertising.

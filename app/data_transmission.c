@@ -1,6 +1,7 @@
 #include "data_transmission.h"
 #include "nrf_drv_spi.h"
 #include "app_error.h"
+#include "nrf_delay.h"
 
 static void spi_evt_handler(nrf_drv_spi_evt_t const *p_event, void *arg);
 
@@ -9,6 +10,14 @@ static const nrfx_spim_t m_spim_master = NRFX_SPIM_INSTANCE(SPI_INSTANCE);
 static nrfx_spim_xfer_desc_t     driver_spim_xfer;
 static uint8_t                  driver_spi_rx_buf[256];
 static uint8_t 					driver_spi_tx_buf[256];
+
+static void spi_event_handler(nrf_drv_spi_evt_t const *p_event, void *arg)
+{
+	if(p_event->type == NRFX_SPIM_EVENT_DONE){
+		spi_xfer_done = true;
+		NRF_LOG_INFO("Transfer completed.");
+	}
+}
 
 void usr_spim_init(void)
 {
@@ -44,6 +53,7 @@ void usr_spi_write(uint8_t *p_buffer, uint32_t size)
 			size -= 255;
 		}
 	}
+    nrf_delay_us(10);
 }
 void usr_spi_read(uint8_t *p_buffer, uint32_t size)
 {
