@@ -59,8 +59,11 @@ ret_code_t axp216_read( uint8_t readAddr, uint8_t byteNum , uint8_t *readData)
 		if (NRF_SUCCESS != ret){
 			break;
 		}
+		temp_buf[0] = 0;
+		temp_buf[1] = 0;
 		ret = nrf_drv_twi_rx(&axp216_m_twi, AXP_DEVICES_ADDR, temp_buf,  byteNum);
 		*readData = temp_buf[0];
+		*(readData+1) = temp_buf[1];
 	}while (0);
 	
 	return ret;
