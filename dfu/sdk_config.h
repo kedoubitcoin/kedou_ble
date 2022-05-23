@@ -178,7 +178,7 @@
 // <i> to immediately transfer a new application if it wishes.
 
 #ifndef NRF_BL_DFU_CONTINUATION_TIMEOUT_MS
-#define NRF_BL_DFU_CONTINUATION_TIMEOUT_MS 10000
+#define NRF_BL_DFU_CONTINUATION_TIMEOUT_MS 30000
 #endif
 
 // <o> NRF_BL_DFU_INACTIVITY_TIMEOUT_MS - Timeout in ms before automatically starting a valid application due to inactivity.  <0-60000000> 
@@ -187,7 +187,7 @@
 // <i> If 0, no inactivity timer will be used. Values 1-99 are invalid.
 
 #ifndef NRF_BL_DFU_INACTIVITY_TIMEOUT_MS
-#define NRF_BL_DFU_INACTIVITY_TIMEOUT_MS 15000
+#define NRF_BL_DFU_INACTIVITY_TIMEOUT_MS 30000
 #endif
 
 // </h> 
