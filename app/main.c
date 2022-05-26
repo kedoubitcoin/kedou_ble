@@ -112,6 +112,7 @@
 #define HW_REVISION                     "1.0.0"
 #define FW_REVISION                     "1.0.0"
 #define SW_REVISION                     "s132_nrf52_7.0.1"
+#define BT_REVISION                     "1.0.0"
 
 #define APDU_TAG_BLE                    0x44
 
@@ -121,7 +122,6 @@
 #define BLE_DIS_PIN                     3
 #define BLE_PIN_ERR                     4
 #define BLE_PIN_TIMEOUT                 5
-#define BLE_PAIR_SUCCESS                6
 #define BLE_PIN_CANCEL                  7
 #define BLE_RCV_DATA                    8
 
@@ -133,9 +133,16 @@
 #define BLE_DEF                         0
 #define BLE_ON_ALWAYS                   1
 #define BLE_OFF_ALWAYS                  2
-#define BLE_DISCON                      3
-#define BLE_ON_TEMPO                    5                         
-#define BLE_OFF_TEMPO                   6     
+#define BLE_DISCON                      3   
+#define BLE_CON                         4
+
+#define PWR_DEF                         0
+#define PWR_SHUTDOWN_SYS                1
+#define PWR_CLOSE_EMMC                  2
+#define PWR_OPEN_EMMC                   3
+#define PWR_CLOSE_BL                    4
+#define PWR_OPEN_BL                     5
+#define PWR_BAT_PERCENT                 6
 
 #define NO_CHARGE                       0
 #define USB_CHARGE                      1
@@ -207,7 +214,40 @@
 #define MAX_TEST_DATA_BYTES            (15U)                /**< max number of test bytes to be used for tx and rx. */
 #define UART_TX_BUF_SIZE               256                         /**< UART TX buffer size. */
 #define UART_RX_BUF_SIZE               256                         /**< UART RX buffer size. */
-//CMD
+//BLE send CMD
+#define BLE_CMD_ADV_NAME               0x01
+//
+#define BLE_CMD_CON_STA                0x02
+#define BLE_CON_STATUS                 0x01
+#define BLE_DISCON_STATUS              0x02
+#define BLE_ADV_ON_STATUS              0x03
+#define BLE_ADV_OFF_STATUS             0x04
+//
+#define BLE_CMD_PAIR_CODE              0x03
+//
+#define BLE_CMD_PAIR_STA               0x04
+#define BLE_PAIR_SUCCESS               0x01
+#define BLE_PAIR_FAIL                  0x02
+//
+#define BLE_FIRMWARE_VER               0x05
+#define BLE_SOFTDEVICE_VER             0x06
+#define BLE_BOOTLOADER_VER             0x07
+//
+#define BLE_CMD_POWER_STA              0x08
+//
+#define BLE_SYSTEM_POWER_PERCENT       0x09
+//
+#define BLE_CMD_KEY_STA                0x0A
+#define BLE_KEY_LONG_PRESS             0x01
+#define BLE_KEY_SHORT_PRESS            0x02
+
+#define BLE_CMD_PWR_STA                0x0B
+#define BLE_CLOSE_SYSTEM               0x01
+#define BLE_CLOSE_EMMC                 0x02
+#define BLE_OPEN_EMMC                  0x03
+#define BLE_PWR_PERCENT                0X04
+//end BLE send CMD
+//
 #define UART_CMD_BLE_CON_STA           0x01
 #define UART_CMD_BLE_PAIR_STA          0x02
 #define UART_CMD_PAIR_CODE             0x03
@@ -215,9 +255,31 @@
 #define UART_CMD_BAT_PERCENT           0x05
 #define UART_CMD_BLE_VERSION           0x06
 #define UART_CMD_CTL_BLE               0x07
-#define UART_CMD_RESET_BLE             0x08
+
 #define UART_CMD_DFU_STA			   0x0a
 
+//Receive ST CMD
+#define ST_CMD_BLE                     0x81
+#define ST_SEND_OPEN_BLE               0x01
+#define ST_SEND_CLOSE_BLE              0x02
+#define ST_SEND_DISCON_BLE             0x03
+#define ST_GET_BLE_SWITCH_STATUS       0x04
+//
+#define ST_CMD_POWER                   0x82
+#define ST_SEND_CLOSE_SYS_PWR          0x01
+#define ST_SEND_CLOSE_EMMC_PWR         0x02
+#define ST_SEND_OPEN_EMMC_PWR          0x03
+#define ST_REQ_POWER_PERCENT           0x04
+//
+#define ST_CMD_BLE_INFO                0x83
+#define ST_REQ_ADV_NAME                0x01
+#define ST_REQ_FIRMWARE_VER            0x02
+#define ST_REQ_SOFTDEVICE_VER          0x03
+#define ST_REQ_BOOTLOADER_VER          0x04
+//
+#define ST_CMD_RESET_BLE               0x84
+#define ST_VALUE_RESET_BLE             0x01
+//end Receive ST CMD
 //VALUE
 #define VALUE_CONNECT                  0x01
 #define VALUE_DISCONNECT               0x02
@@ -248,6 +310,8 @@
 #define RESPONESE_NAME_UART				0x02
 #define RESPONESE_BAT_UART				0x03
 #define RESPONESE_VER_UART				0x04
+#define RESPONESE_SD_VER_UART           0x05
+#define RESPONESE_BOOT_VER_UART         0x06
 #define DEF_RESP						0xFF
 
 #define BLE_CTL_ADDR					0x6f000
@@ -278,6 +342,7 @@ static volatile uint8_t ble_evt_flag = BLE_DEFAULT;
 uint8_t spi_evt_flag = DEFAULT_FLAG;
 volatile uint8_t ble_adv_switch_flag = BLE_DEF;
 static volatile uint8_t ble_conn_flag = BLE_DEF;
+static volatile uint8_t pwr_status_flag = PWR_DEF;
 static volatile uint8_t trans_info_flag = UART_DEF;
 static volatile uint8_t ble_trans_timer_flag=TIMER_INIT_FLAG;
 static uint8_t mac_ascii[12];
@@ -330,8 +395,13 @@ static void fstorage_evt_handler(nrf_fstorage_evt_t * p_evt);
 static uint8_t bond_check_key_flag = INIT_VALUE;
 static uint8_t rcv_head_flag = 0;
 static uint8_t ble_status_flag = 0;
-       uint8_t ctl_channel_flag = 0;
 static uint8_t battery_percent=0;
+
+//AXP216 global status
+static uint8_t g_vbus_status = 0;
+static uint8_t g_charge_status = 0;
+static uint8_t g_battery_status = 0;
+static uint8_t g_key_status = 0;
 
 #ifdef SCHED_ENABLE
 static ringbuffer_t m_ble_fifo;
@@ -598,16 +668,6 @@ void battery_level_meas_timeout_handler(void *p_context)
     }
 }
 
-#ifdef UART_TRANS
-static void uart_rsp_status(uint8_t rsp)
-{
-    bak_buff[0]=0xA5;
-    bak_buff[1]=0x5A;
-    bak_buff[2]=rsp;
-    uart_put_data(bak_buff,3);
-}
-#endif
-
 static volatile uint8_t timeout_count=0;
 static volatile uint16_t timeout_longcnt=0;
 
@@ -653,16 +713,22 @@ void m_100ms_timeout_hander(void * p_context)
         }
     }
 }
+
 void m_1s_timeout_hander(void * p_context)
 {
     UNUSED_PARAMETER(p_context);
 
     one_second_counter++;
 
-    if(one_second_counter >=2)
+    if((one_second_counter%5) == 0)
     {
-       
+        bat_level_to_st = get_battery_percent();
     }
+
+    if(one_second_counter >59)
+    {
+        one_second_counter = 0;
+    }         
 }
 
 /**@brief Function for handling the Battery Service events.
@@ -736,10 +802,9 @@ static void pm_evt_handler(pm_evt_t const * p_evt)
             if (conn_sec_status.mitm_protected)
             {
 #ifdef UART_TRANS
-                bak_buff[0] = UART_CMD_BLE_PAIR_STA;
-                bak_buff[1] = 0x01;
-                bak_buff[2] = VALUE_SECCESS;
-                send_stm_data(bak_buff,bak_buff[1]);
+                bak_buff[0] = BLE_CMD_PAIR_STA;
+                bak_buff[1] = BLE_PAIR_SUCCESS;
+                send_stm_data(bak_buff,2);
 #endif
                 nrf_ble_gatt_data_length_set(&m_gatt,m_conn_handle,BLE_GAP_DATA_LENGTH_MAX);
                 NRF_LOG_INFO("Link secured. Role: %d. conn_handle: %d, Procedure: %d",
@@ -768,10 +833,9 @@ static void pm_evt_handler(pm_evt_t const * p_evt)
         case PM_EVT_CONN_SEC_FAILED:
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
 #ifdef UART_TRANS
-            bak_buff[0] = UART_CMD_BLE_PAIR_STA;
-            bak_buff[1] = 0x01;
-            bak_buff[2] = VALUE_FAILED;
-            send_stm_data(bak_buff,bak_buff[1]);
+            bak_buff[0] = BLE_CMD_PAIR_STA;
+            bak_buff[1] = BLE_PAIR_FAIL;
+            send_stm_data(bak_buff,2);
 #endif
             break;
 
@@ -1116,7 +1180,6 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
                   && data_recived_buf[4] == 0x03)
             {
                 ble_adv_switch_flag = BLE_OFF_ALWAYS;
-                ctl_channel_flag = BLE_CHANNEL;
                 return;
             }
         }
@@ -1355,10 +1418,9 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             bond_check_key_flag = INIT_VALUE;
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
 #ifdef UART_TRANS
-            bak_buff[0] = UART_CMD_BLE_CON_STA;
-            bak_buff[1] = 0x01;
-            bak_buff[2] = VALUE_DISCONNECT;
-            send_stm_data(bak_buff,bak_buff[1]);
+            bak_buff[0] = BLE_CMD_CON_STA;
+            bak_buff[1] = BLE_DISCON_STATUS;
+            send_stm_data(bak_buff,2);
 #endif
             // Check if the last connected peer had not used MITM, if so, delete its bond information.
             if (m_peer_to_be_deleted != PM_PEER_ID_INVALID)
@@ -1375,10 +1437,9 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             NRF_LOG_INFO("Connected");
             ble_evt_flag = BLE_CONNECT;
 #ifdef UART_TRANS
-            bak_buff[0] = UART_CMD_BLE_CON_STA;
-            bak_buff[1] = 0x01;
-            bak_buff[2] = VALUE_CONNECT;
-            send_stm_data(bak_buff,bak_buff[1]);
+            bak_buff[0] = BLE_CMD_CON_STA;
+            bak_buff[1] = BLE_CON_STATUS;
+            send_stm_data(bak_buff,2);
 #endif
             m_peer_to_be_deleted = PM_PEER_ID_INVALID;
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
@@ -1426,10 +1487,9 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             memcpy(passkey, p_ble_evt->evt.gap_evt.params.passkey_display.passkey, PASSKEY_LENGTH);
             passkey[PASSKEY_LENGTH] = 0;
 #ifdef UART_TRANS
-            bak_buff[0] = UART_CMD_PAIR_CODE;
-            bak_buff[1] = PASSKEY_LENGTH;
-            memcpy(&bak_buff[2],passkey,PASSKEY_LENGTH);
-            send_stm_data(bak_buff,PASSKEY_LENGTH);
+            bak_buff[0] = BLE_CMD_PAIR_CODE;
+            memcpy(&bak_buff[1],passkey,PASSKEY_LENGTH);
+            send_stm_data(bak_buff,1+PASSKEY_LENGTH);
 #endif
             NRF_LOG_INFO("Passkey: %s", nrf_log_push(passkey));
         } break;
@@ -1592,24 +1652,24 @@ void uart_event_handle(app_uart_evt_t * p_event)
     static uint8_t data_array[64];
     static uint8_t index = 0;
     static uint32_t lenth = 0;
-    uint8_t xor_byte;
+    uint8_t uart_xor_byte;
 
     switch (p_event->evt_type)
     {
         case APP_UART_DATA_READY:
             UNUSED_VARIABLE(app_uart_get(&data_array[index]));
             index++;
-
+            // NRF_LOG_INFO("receive uart data.")
 			if(1 == index)
 			{
-				if((UART_TX_TAG != data_array[0])&&(UART_TX_TAG2 != data_array[0]))
+				if(UART_TX_TAG != data_array[0])
 				{
 					index=0;
                     return;
 				}
             }else if(2 == index)
             {
-                if((UART_TX_TAG2 != data_array[1])&&(UART_TX_TAG != data_array[1]))
+                if(UART_TX_TAG2 != data_array[1])
                 {
                     index=0;
                     return;
@@ -1627,53 +1687,83 @@ void uart_event_handle(app_uart_evt_t * p_event)
 			}
 			else if(index >= lenth+4)
             {
-                xor_byte = calcXor(data_array,index-1);
-                if(xor_byte != data_array[index-1])
+                uart_xor_byte = calcXor(data_array,index-1);
+                if(uart_xor_byte != data_array[index-1])
                 {
                     index=0;
                     return;
                 }
                 switch(data_array[4])
-                {
-                    case UART_CMD_CTL_BLE:
-                        if(BLE_ON_ALWAYS == data_array[6])
+                {            
+                    case ST_CMD_BLE:
+                        switch (data_array[5])
                         {
-							ble_adv_switch_flag = BLE_ON_ALWAYS;
-							NRF_LOG_INFO("RCV ble always ON.");
-                        }else if((BLE_OFF_ALWAYS == data_array[6])||(0 == data_array[6]))
+                            case ST_SEND_OPEN_BLE:
+                                ble_adv_switch_flag = BLE_ON_ALWAYS;
+							    NRF_LOG_INFO("RCV ble always ON.");
+                                break;
+                            case ST_SEND_CLOSE_BLE:
+                                ble_adv_switch_flag = BLE_OFF_ALWAYS;
+							    NRF_LOG_INFO("RCV ble always OFF.");
+                                break;
+                            case ST_SEND_DISCON_BLE:
+                                ble_conn_flag = BLE_DISCON;
+							    NRF_LOG_INFO("RCV ble flag disconnect.");
+                                break;
+                            case ST_GET_BLE_SWITCH_STATUS:
+                                ble_conn_flag = BLE_CON;
+                                break;
+                            default:
+                                break;
+                        }                       
+                        break;
+                    case ST_CMD_POWER:
+                        switch (data_array[5])
                         {
-							ble_adv_switch_flag = BLE_OFF_ALWAYS;
-							NRF_LOG_INFO("RCV ble always OFF.");
-						}else if(BLE_DISCON == data_array[6])
+                            case ST_SEND_CLOSE_SYS_PWR:
+                                pwr_status_flag = PWR_SHUTDOWN_SYS;                                
+                                break;
+                            case ST_SEND_CLOSE_EMMC_PWR:
+                                pwr_status_flag = PWR_CLOSE_EMMC;                                
+                                break;
+                            case ST_SEND_OPEN_EMMC_PWR:
+                                pwr_status_flag = PWR_OPEN_EMMC;                                
+                                break;
+                            case ST_REQ_POWER_PERCENT:
+                                pwr_status_flag = PWR_BAT_PERCENT;
+                                break;
+                            default:
+                                pwr_status_flag = PWR_DEF;
+                                break;
+                        }                        
+                        break;
+                    case ST_CMD_BLE_INFO:
+                        switch (data_array[5])
                         {
-                            ble_conn_flag = BLE_DISCON;
-							NRF_LOG_INFO("RCV ble flag disconnect.");
-                        }else if(BLE_ON_TEMPO == data_array[6])
+                            case ST_REQ_ADV_NAME:
+                                trans_info_flag = RESPONESE_NAME_UART;
+                                break;
+                            case ST_REQ_FIRMWARE_VER:
+                                trans_info_flag = RESPONESE_VER_UART;
+                                break;
+                            case ST_REQ_SOFTDEVICE_VER:
+                                trans_info_flag = RESPONESE_SD_VER_UART;
+                                break;
+                            case ST_REQ_BOOTLOADER_VER:
+                                trans_info_flag = RESPONESE_BOOT_VER_UART;
+                                break;
+                            default:
+                                trans_info_flag = UART_DEF;
+                                break;
+                        }                    
+                        break;
+                    case ST_CMD_RESET_BLE:
+                        if(ST_VALUE_RESET_BLE == data_array[5])
                         {
-                            ble_conn_flag = BLE_ON_TEMPO;
-                            NRF_LOG_INFO("RCV ble flag start adv flag.");
-                        }else if(BLE_OFF_TEMPO == data_array[6])
-                        {
-                            ble_conn_flag = BLE_OFF_TEMPO;
-                            NRF_LOG_INFO("RCV ble flag stop adv flag.");
-                        }else{
-                            
-                            NRF_LOG_INFO("Receive flag is %d \n",data_array[6]);
+                            NVIC_SystemReset();
                         }
-                        ctl_channel_flag = UART_CHANNEL;
                         break;
-                    case UART_CMD_RESET_BLE:
-                        NVIC_SystemReset();
-                        break;
-					case UART_CMD_ADV_NAME:
-						trans_info_flag = RESPONESE_NAME_UART;
-						break;
-					case UART_CMD_BAT_PERCENT:
-						trans_info_flag = RESPONESE_BAT_UART;
-						break;
-					case UART_CMD_BLE_VERSION:
-						trans_info_flag = RESPONESE_VER_UART;
-						break;
+
                     default:
                         break;
                 }
@@ -1720,7 +1810,7 @@ static void usr_uart_init(void)
                        UART_RX_BUF_SIZE,
                        UART_TX_BUF_SIZE,
                        uart_event_handle,
-                       APP_IRQ_PRIORITY_LOWEST,
+                       _PRIO_APP_LOW_MID,
                        err_code);
     APP_ERROR_CHECK(err_code);
 }
@@ -1791,8 +1881,8 @@ static void power_management_init(void)
 #else
 void forwarding_to_st_data(void)
 {
-    uint8_t send_spi_offset=0;
-
+		uint8_t send_spi_offset=0;
+	
     if(BLE_RCV_DATA == ble_evt_flag)
     {
         if(data_recived_len != 0)
@@ -1868,9 +1958,7 @@ static void ble_resp_data(void)
     }
 }
 static void phone_resp_data(void)
-{
-    uint32_t counter = 0;
-    
+{    
     read_st_resp_data();
     spi_evt_flag = READ_SPI_HEAD;
 
@@ -1907,8 +1995,10 @@ static void idle_state_handle(void)
         nrf_pwr_mgmt_run();
     }
 }
+
 void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 {
+    uint8_t buff[4];
     switch(pin)
     {
         case SLAVE_SPI_RSP_IO:
@@ -1924,14 +2014,13 @@ void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
                 enter_low_power_mode();
             }   
             break;
-        case POWER_IC_IRQ_IO:
-            if(action == NRF_GPIOTE_POLARITY_HITOLO){
-                get_irq_vbus_status();
-                get_irq_charge_status();
-                get_irq_low_battery();
-                get_irq_key_status();
-
-            } 
+        case POWER_IC_IRQ_IO:            
+            g_vbus_status = get_irq_vbus_status();
+            buff[0] = g_vbus_status;
+            uart_put_data(buff,1);
+            g_charge_status = get_irq_charge_status();
+            g_battery_status = get_irq_battery_status();
+            g_key_status = get_irq_key_status();
             break;
         default:
             break;
@@ -1996,11 +2085,11 @@ static void uart_put_data(uint8_t *pdata,uint8_t lenth)
 
 static void send_stm_data(uint8_t *pdata,uint8_t lenth)
 {
-    uart_trans_buff[0] = UART_TX_TAG;
-    uart_trans_buff[1] = UART_TX_TAG2;
+    uart_trans_buff[0] = UART_TX_TAG2;
+    uart_trans_buff[1] = UART_TX_TAG;
     uart_trans_buff[2] = 0x00;
-    uart_trans_buff[3] = lenth+3;
-    memcpy(&uart_trans_buff[4],pdata,lenth+2);
+    uart_trans_buff[3] = lenth+1;
+    memcpy(&uart_trans_buff[4],pdata,lenth);
     uart_trans_buff[uart_trans_buff[3]+3] = calcXor(uart_trans_buff,(uart_trans_buff[3]+3));
     
     uart_put_data(uart_trans_buff,uart_trans_buff[3]+4);
@@ -2012,14 +2101,15 @@ static void system_init()
 #ifdef SCHED_ENABLE
     create_ringBuffer(&m_ble_fifo,data_recived_buf,sizeof(data_recived_buf));
 #endif
-    gpio_init();
     usr_rtc_init();
     usr_spim_init();
     ret_code_t err_code = usr_power_init();
     APP_ERROR_CHECK(err_code);
 #ifdef UART_TRANS
     usr_uart_init();
+    NRF_LOG_INFO("uart init ok ......");
 #endif
+    gpio_init();
 }
 
 /**@brief Function for starting advertising.
@@ -2152,26 +2242,29 @@ static void rsp_st_uart_cmd(void *p_event_data,uint16_t event_size)
 {
 	if(RESPONESE_NAME_UART == trans_info_flag)
     {
-        bak_buff[0] = UART_CMD_ADV_NAME;
-        bak_buff[1] = 0x12;
-        memcpy(&bak_buff[2],(uint8_t *)ble_adv_name,ADV_NAME_LENGTH);
-        send_stm_data(bak_buff,bak_buff[1]);
+        bak_buff[0] = BLE_CMD_ADV_NAME;
+        memcpy(&bak_buff[1],(uint8_t *)ble_adv_name,ADV_NAME_LENGTH);
+        send_stm_data(bak_buff,1+ADV_NAME_LENGTH);
         trans_info_flag = DEF_RESP;
     }else if(trans_info_flag == RESPONESE_VER_UART)
     {
-		bak_buff[0] = UART_CMD_BLE_VERSION;
-        bak_buff[1] = 0x05;
-        memcpy(&bak_buff[2],FW_REVISION,sizeof(FW_REVISION));
-        send_stm_data(bak_buff,bak_buff[1]);
+		bak_buff[0] = BLE_FIRMWARE_VER;
+        memcpy(&bak_buff[1],FW_REVISION,sizeof(FW_REVISION)-1);
+        send_stm_data(bak_buff,sizeof(FW_REVISION));
 		trans_info_flag = DEF_RESP;
-	}else if(trans_info_flag == RESPONESE_BAT_UART)
+	}else if(trans_info_flag == RESPONESE_SD_VER_UART)
 	{
-        bak_buff[0] = UART_CMD_BAT_PERCENT;
-        bak_buff[1] = 0x01;
-        bak_buff[2] = bat_level_to_st;
-        send_stm_data(bak_buff,bak_buff[1]);
+        bak_buff[0] = BLE_SOFTDEVICE_VER;
+        memcpy(&bak_buff[1],SW_REVISION,sizeof(SW_REVISION)-1);
+        send_stm_data(bak_buff,sizeof(SW_REVISION));
 		trans_info_flag = DEF_RESP;
-	}	
+    }else if(trans_info_flag == RESPONESE_BOOT_VER_UART)
+	{
+        bak_buff[0] = BLE_BOOTLOADER_VER;
+        memcpy(&bak_buff[1],BT_REVISION,sizeof(BT_REVISION)-1);
+        send_stm_data(bak_buff,sizeof(BT_REVISION));
+		trans_info_flag = DEF_RESP;
+    }
 }
 static void manage_bat_level(void *p_event_data,uint16_t event_size)
 {
@@ -2217,10 +2310,9 @@ static void ble_ctl_process(void *p_event_data,uint16_t event_size)
         if(BLE_ON_ALWAYS == ble_status_flag)
         {
 #ifdef UART_TRANS
-            bak_buff[0] = UART_CMD_BLE_CON_STA;
-            bak_buff[1] = 0x01;
-            bak_buff[2] = VALUE_DISCONNECT;
-            send_stm_data(bak_buff,bak_buff[1]);
+            bak_buff[0] = BLE_CMD_CON_STA;
+            bak_buff[1] = BLE_ADV_OFF_STATUS;
+            send_stm_data(bak_buff,2);
 #endif    		
             flash_data_write(BLE_CTL_ADDR,m_data);
             ble_status_flag = BLE_OFF_ALWAYS;
@@ -2232,7 +2324,9 @@ static void ble_ctl_process(void *p_event_data,uint16_t event_size)
         else 
         {
 #ifdef UART_TRANS
-        	uart_rsp_status(CTL_FAILED);
+            bak_buff[0] = BLE_CMD_CON_STA;
+            bak_buff[1] = BLE_ADV_OFF_STATUS;
+            send_stm_data(bak_buff,2);
 #endif                
         }
     }
@@ -2241,6 +2335,11 @@ static void ble_ctl_process(void *p_event_data,uint16_t event_size)
         ble_adv_switch_flag = BLE_DEF;
         if(BLE_OFF_ALWAYS == ble_status_flag)
         {
+#ifdef UART_TRANS
+            bak_buff[0] = BLE_CMD_CON_STA;
+            bak_buff[1] = BLE_ADV_ON_STATUS;
+            send_stm_data(bak_buff,2);
+#endif   
             advertising_start();
             flash_data_write(BLE_CTL_ADDR,m_data2);
             ble_status_flag = BLE_ON_ALWAYS;
@@ -2248,40 +2347,74 @@ static void ble_ctl_process(void *p_event_data,uint16_t event_size)
         }
         else
         {
-#ifdef UART_TRANS                
-            uart_rsp_status(CTL_FAILED);
+#ifdef UART_TRANS  
+            bak_buff[0] = BLE_CMD_CON_STA;
+            bak_buff[1] = BLE_ADV_ON_STATUS;
+            send_stm_data(bak_buff,2);
 #endif          
         }
     }
 	if(BLE_DISCON == ble_conn_flag)
     {
+        ble_conn_flag = BLE_DEF;
         if(ble_evt_flag != BLE_DISCONNECT || ble_evt_flag != BLE_DEFAULT)
-        {
+        {           
             sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
             ble_evt_flag = BLE_DISCONNECT;
-			ble_conn_flag = BLE_DEF;
+			
             NRF_LOG_INFO("Ctl disconnect.");
-        }else 
-        {
-			ble_conn_flag = BLE_DEF;
-		}
-    }else if(BLE_ON_TEMPO == ble_conn_flag)
-    {
-        if((BLE_OFF_TEMPO == ble_status_flag)||(BLE_OFF_ALWAYS == ble_status_flag))
-        {
-            advertising_start();
-            ble_status_flag = BLE_ON_TEMPO;
         }
-        ble_conn_flag = BLE_DEF;
-    }else if(BLE_OFF_TEMPO == ble_conn_flag)
-    {
-        if((BLE_ON_TEMPO == ble_status_flag)||(BLE_ON_ALWAYS == ble_status_flag))
-        {
-            check_advertising_stop();
-            ble_status_flag = BLE_OFF_TEMPO;
-        }
-        ble_conn_flag = BLE_DEF;
+#ifdef UART_TRANS
+        bak_buff[0] = BLE_CMD_CON_STA;
+        bak_buff[1] = BLE_DISCON_STATUS;
+        send_stm_data(bak_buff,2);
+#endif
     }
+    if(BLE_CON == ble_conn_flag)
+    {
+        ble_conn_flag = BLE_DEF;
+        bak_buff[0] = BLE_CMD_CON_STA;
+        bak_buff[1] = ble_status_flag+2;
+        send_stm_data(bak_buff,2);
+    }
+    //
+    uint8_t respons_flag=0;
+    switch (pwr_status_flag)
+    {
+    case PWR_SHUTDOWN_SYS:
+#ifdef UART_TRANS
+        bak_buff[0] = BLE_CMD_PWR_STA;
+        bak_buff[1] = BLE_CLOSE_SYSTEM;
+        send_stm_data(bak_buff,2);
+#endif
+        close_all_power();
+        break;
+    case PWR_CLOSE_EMMC:
+        respons_flag = BLE_CLOSE_EMMC;
+        ctl_emmc_power(AXP_CLOSE_EMMC);
+        break;
+    case PWR_OPEN_EMMC:
+        respons_flag = BLE_OPEN_EMMC;
+        ctl_emmc_power(AXP_OPEN_EMMC);
+        break;
+    case PWR_BAT_PERCENT:
+        pwr_status_flag = PWR_DEF;
+        bak_buff[0] = BLE_SYSTEM_POWER_PERCENT;
+        bak_buff[1] = bat_level_to_st;
+        send_stm_data(bak_buff,2);
+    default:
+        break;
+    }
+    if(PWR_DEF != pwr_status_flag)
+    {
+#ifdef UART_TRANS
+        bak_buff[0] = BLE_CMD_PWR_STA;
+        bak_buff[1] = respons_flag;
+        send_stm_data(bak_buff,2);
+#endif
+        pwr_status_flag =  PWR_DEF;  
+    }
+                                                                                                                           
 }
 static void scheduler_init(void)
 {
