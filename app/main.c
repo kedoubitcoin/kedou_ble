@@ -351,8 +351,7 @@ static char ble_adv_name[ADV_NAME_LENGTH];
 
 extern rtc_date_t rtc_date;
 
-static uint8_t	bat_level_to_st=0xff;
-static uint8_t	bat_level_flag=0;
+static volatile uint8_t	bat_level_to_st=0xff;
 static uint8_t	read_flag=0;
 static uint8_t	backup_bat_level=0xff;
 
@@ -722,7 +721,7 @@ void m_1s_timeout_hander(void * p_context)
 
     if((one_second_counter%5) == 0)
     {
-        bat_level_to_st = get_battery_percent();
+        bat_level_to_st = get_battery_percent();        
     }
 
     if(one_second_counter >59)
@@ -1998,7 +1997,6 @@ static void idle_state_handle(void)
 
 void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 {
-    uint8_t buff[4];
     switch(pin)
     {
         case SLAVE_SPI_RSP_IO:
@@ -2014,7 +2012,8 @@ void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
                 enter_low_power_mode();
             }   
             break;
-        case POWER_IC_IRQ_IO:            
+        case POWER_IC_IRQ_IO:
+            uint8_t buff[4];
             g_vbus_status = get_irq_vbus_status();
             buff[0] = g_vbus_status;
             uart_put_data(buff,1);
@@ -2267,27 +2266,15 @@ static void rsp_st_uart_cmd(void *p_event_data,uint16_t event_size)
     }
 }
 static void manage_bat_level(void *p_event_data,uint16_t event_size)
-{
-	uint32_t len=4;
-    uint8_t data[4];    
+{  
+    static uint8_t bak_bat_persent=0xff;
 
-	if(read_flag == 0)
-	{
-		read_flag =1;
-		nrf_fstorage_read(&fstorage, BAT_LVL_ADDR, data, len);
-		if(data[0]<=4)
-		{
-			backup_bat_level = data[0];
-			NRF_LOG_INFO("read storrage level is %d",backup_bat_level);
-		}
-	}
-    if(bat_level_flag == 2)
-    {   
-    	bat_level_flag = 1;		
-		m_data3 = (uint32_t)backup_bat_level;
-		flash_data_write(BAT_LVL_ADDR,m_data3);
-		nrf_fstorage_read(&fstorage, BAT_LVL_ADDR, data, len);
-		NRF_LOG_INFO("buff0- %d,buff1- %d,buff2- %d,buff3- %d",data[0],data[1],data[2],data[3]);					
+    if(bak_bat_persent != bat_level_to_st)
+    {
+        bak_bat_persent = bat_level_to_st;
+        bak_buff[0] = BLE_SYSTEM_POWER_PERCENT;
+        bak_buff[1] = bat_level_to_st;
+        send_stm_data(bak_buff,2);
     }
 }
 static void check_advertising_stop(void)
