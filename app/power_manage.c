@@ -1,25 +1,18 @@
 #include "power_manage.h"
 
+#define DC1SW 0x80
 
 ret_code_t usr_power_init(void)
 {
     ret_code_t ret;
+    
     ret = axp216_twi_master_init();
     nrf_delay_ms(800);  // here must delay 800ms at least
     NRF_LOG_INFO("Init twi master.");
     axp216_init();
     NRF_LOG_INFO("Init axp216 chip.");
     nrf_delay_ms(2000);
-    //close_all_power();
     open_all_power();
-#if 0
-		uint8_t ocv_cap[32];
-    axp216_read(0xc0,32,ocv_cap); //Verify that OCV is written in
-    for(uint8_t i=0;i<32;i++) 
-    {
-        NRF_LOG_INFO("[OCV_CAP[%d] =%d]\r\n", i,ocv_cap[i]); 
-    }
-#endif
 
     return ret;
 }
@@ -29,14 +22,17 @@ ret_code_t open_all_power(void)
     ret_code_t ret;
 	uint8_t val=0;
 
-    ret = axp216_write(AXP_LDO_DC_EN1,0xFF);
+    //set ALDO3 3.3V
+    axp216_write(AXP_ALDO3OUT_VOL,0xff);
+
+    ret = axp216_write(AXP_LDO_DC_EN1,0xff);
     nrf_delay_ms(100);
     ret = axp216_read(AXP_LDO_DC_EN1,1,&val);
     NRF_LOG_INFO("1---Read DC-reg val=%d",val);
     nrf_delay_ms(100);
 
-    ret = axp216_write(AXP_LDO_DC_EN2,0xFF);
-    nrf_delay_ms(100);
+    ret = axp216_write(AXP_LDO_DC_EN2,0xFF );
+    nrf_delay_ms(100);  
     val = 0;
     ret = axp216_read(AXP_LDO_DC_EN2,1,&val);
     NRF_LOG_INFO("1---Read DC-reg val=%d",val);
@@ -55,15 +51,22 @@ void close_all_power(void)
 	axp216_write(AXP_OFF_CTL,val);
 }
 
+//EMMC --- ALDO3(0.7~3.3V) 0x20
+void ctl_emmc_power(uint8_t value)
+{
+    axp_update(AXP_LDO_DC_EN2,value,0x20);
+}
+
 uint8_t get_battery_percent(void)
 {
     uint8_t percent,mm;
 
-    axp216_read(AXP_CAP,1,&percent);
-    NRF_LOG_INFO("nnow_rest_CAP = %d",(percent & 0x7F));
+    axp216_read(AXP_CAP,1,&mm);
+    percent = mm & 0x7F;
+    // NRF_LOG_INFO("nnow_rest_CAP = %d",(percent & 0x7F));
 
-    axp216_read(0x10,1,&mm);//34h   52
-    NRF_LOG_INFO("switch_control_mm = %d",(mm & 0x7F) );
+    // axp216_read(0x10,1,&mm);//34h   52
+    // NRF_LOG_INFO("switch_control_mm = %d",(mm & 0x7F) );
     axp_charging_monitor(); 
 
     return percent;
@@ -72,52 +75,93 @@ uint8_t get_battery_percent(void)
 //REG48H
 uint8_t get_irq_vbus_status(void)
 {
+    static uint8_t last_vbus_status = 0;
     uint8_t vbus_status = 0,reg = 0;
-
+    
     axp216_read(AXP_INTSTS1,1,&reg);
-    if(reg & 0x08 == 1){
-        vbus_status = VBUS_INSERT;
-    }else if(reg & 0x04 == 1){
-        vbus_status = VBUS_REMOVE;
+    NRF_LOG_INFO("vbus status %d ",reg);
+    if(reg & IRQ_VBUS_INSERT == IRQ_VBUS_INSERT){
+        vbus_status = IRQ_VBUS_INSERT;
+    }else if(reg & IRQ_VBUS_REMOVE == IRQ_VBUS_REMOVE){
+        vbus_status = IRQ_VBUS_REMOVE;
     }
-    return vbus_status;
+    //compare
+    if(last_vbus_status != vbus_status){
+        last_vbus_status = vbus_status;
+        return last_vbus_status;
+    }else{
+        return 0;
+    }
 }
 //REG49H 
 uint8_t get_irq_charge_status(void)
 {
+    static uint8_t last_charge_stasus = 0;
     uint8_t charge_status = 0,reg = 0;
 
     axp216_read(AXP_INTSTS2,1,&reg);
-    if(reg & 0x08 == 1){
-        charge_status = CHARGING_BAT;
-    }else if(reg & 0x04 == 1){
-        charge_status = CHARGE_OVER;
+    NRF_LOG_INFO("charge status %d ",reg);
+    if(reg & 0x08 == 0x08){
+        charge_status = IRQ_CHARGING_BAT;
+    }else if(reg & 0x04 == 0x04){
+        charge_status = IRQ_CHARGE_OVER;
     }
-    return charge_status;
+    //compare
+    if(last_charge_stasus != charge_status){
+        last_charge_stasus = charge_status;
+        return last_charge_stasus;
+    }else{
+        return 0;
+    }
 }
 //REG4BH
-uint8_t get_irq_low_battery(void)
+uint8_t get_irq_battery_status(void)
 {
+    static uint8_t last_bat_status = 0;
     uint8_t bat_status = 0,reg = 0;
 
     axp216_read(AXP_INTSTS4,1,&reg);
-    if(reg & 0x02 == 1){
-        bat_status = LOW_BAT_1;
-    }else if(reg & 0x01 == 1){
-        bat_status = LOW_BAT_2;
+    NRF_LOG_INFO("battery status %d ",reg);
+    if(reg & 0x02 == 0x02){
+        bat_status = IRQ_LOW_BAT_1;
+    }else if(reg & 0x01 == 0x01){
+        bat_status = IRQ_LOW_BAT_2;
     }
-    return bat_status;
+    if(last_bat_status != bat_status){
+        last_bat_status = bat_status;
+        return last_bat_status;
+    }else{
+        return 0;
+    }
 }
 //REG4CH
 uint8_t get_irq_key_status(void)
 {
+    static uint8_t last_key_status = 0;
     uint8_t key_status = 0,reg = 0;
 
     axp216_read(AXP_INTSTS5,1,&reg);
-    if(reg & 0x10 == 1){
-        key_status = SHORT_PRESS;
-    }else if(reg & 0x80 == 1){
-        key_status = LONG_PRESS;
+    NRF_LOG_INFO("key status %d ",reg);
+    if(reg & 0x10 == 0x10){
+        key_status = IRQ_SHORT_PRESS;
+    }else if(reg & 0x08 == 0x08){
+        key_status = IRQ_LONG_PRESS;
     }
-    return key_status;
+    if(last_key_status != key_status){
+        last_key_status = key_status;
+        return last_key_status;
+    }else{
+        return 0;
+    }
+}
+
+void set_wakeup_irq(uint8_t set_value)
+{
+    uint8_t reg_val;
+
+	axp216_read(AXP_VOFF_SET, 1, &reg_val);  
+
+	reg_val = (reg_val & ~0x10) | set_value;
+   	axp216_write(AXP_VOFF_SET, reg_val);
+
 }

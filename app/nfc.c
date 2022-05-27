@@ -97,7 +97,7 @@ bool apdu_cmd =false;
 //static volatile bool twi_xfer_done = false ;
 //static uint8_t twi_xfer_dir = 0; //0-write 1-read
 extern uint8_t ble_adv_switch_flag;
-extern uint8_t ctl_channel_flag;
+ uint8_t ctl_channel_flag;
 
 #if 0
 /**

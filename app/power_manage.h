@@ -13,17 +13,23 @@
 #define AXP_DCDC5  0x20
 
 //IRQ status
-#define VBUS_INSERT 0x01
-#define VBUS_REMOVE 0x02
+#define IRQ_VBUS_INSERT 0x08
+#define IRQ_VBUS_REMOVE 0x04
 
-#define CHARGING_BAT 0x01
-#define CHARGE_OVER  0x02
+#define IRQ_CHARGING_BAT 0x01
+#define IRQ_CHARGE_OVER  0x02
 
-#define LOW_BAT_1    0x01
-#define LOW_BAT_2    0x02
+#define IRQ_LOW_BAT_1    0x01
+#define IRQ_LOW_BAT_2    0x02
 
-#define SHORT_PRESS   0x01
-#define LONG_PRESS   0x02
+#define IRQ_SHORT_PRESS   0x01
+#define IRQ_LONG_PRESS   0x02
+
+#define AXP_CLOSE_EMMC   0x00
+#define AXP_OPEN_EMMC    0x20
+
+#define AXP_CLOSE_BL     0x00
+#define AXP_OPEN_BL      0x80
 
 extern ret_code_t usr_power_init(void);
 
@@ -31,16 +37,20 @@ extern ret_code_t open_all_power(void);
 
 extern void close_all_power(void);
 
+extern void ctl_emmc_power(uint8_t value);
+
 extern uint8_t get_battery_percent(void);
 
 extern uint8_t get_irq_vbus_status(void);
 
 extern uint8_t get_irq_charge_status(void);
 
-extern uint8_t get_irq_low_battery(void);
+extern uint8_t get_irq_battery_status(void);
 
 extern uint8_t get_irq_key_status(void);
 
 extern void test_dcdc(void);
+
+extern void set_wakeup_irq(uint8_t set_value);
 
 #endif
