@@ -22,8 +22,8 @@
 #define IRQ_LOW_BAT_1    0x01
 #define IRQ_LOW_BAT_2    0x02
 
-#define IRQ_SHORT_PRESS   0x01
-#define IRQ_LONG_PRESS   0x02
+#define IRQ_SHORT_PRESS  0x10
+#define IRQ_LONG_PRESS   0x08
 
 #define AXP_CLOSE_EMMC   0x00
 #define AXP_OPEN_EMMC    0x20

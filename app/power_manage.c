@@ -137,20 +137,21 @@ uint8_t get_irq_battery_status(void)
 //REG4CH
 uint8_t get_irq_key_status(void)
 {
-    static uint8_t last_key_status = 0;
     uint8_t key_status = 0,reg = 0;
 
     axp216_read(AXP_INTSTS5,1,&reg);
     NRF_LOG_INFO("key status %d ",reg);
-    if(reg & 0x10 == 0x10){
-        key_status = IRQ_SHORT_PRESS;
-    }else if(reg & 0x08 == 0x08){
-        key_status = IRQ_LONG_PRESS;
+    if((reg & IRQ_SHORT_PRESS) == IRQ_SHORT_PRESS){
+        key_status = 0x01;
+    }else if((reg & IRQ_LONG_PRESS) == IRQ_LONG_PRESS){
+        key_status = 0x02;
     }
-    if(last_key_status != key_status){
-        last_key_status = key_status;
-        return last_key_status;
-    }else{
+
+    if(key_status != 0)
+    {
+        return key_status;
+    }else
+    {
         return 0;
     }
 }
