@@ -13,8 +13,8 @@
 #define AXP_DCDC5  0x20
 
 //IRQ status
-#define IRQ_VBUS_INSERT 0x08
-#define IRQ_VBUS_REMOVE 0x04
+#define IRQ_VBUS_INSERT 0x48
+#define IRQ_VBUS_REMOVE 0x24
 
 #define IRQ_CHARGING_BAT 0x01
 #define IRQ_CHARGE_OVER  0x02
@@ -52,5 +52,7 @@ extern uint8_t get_irq_key_status(void);
 extern void test_dcdc(void);
 
 extern void set_wakeup_irq(uint8_t set_value);
+
+extern void clear_irq_reg(void);
 
 #endif

@@ -112,7 +112,7 @@
 #define HW_REVISION                     "1.0.0"
 #define FW_REVISION                     "1.0.0"
 #define SW_REVISION                     "s132_nrf52_7.0.1"
-#define BT_REVISION                     "1.0.0"
+#define BT_REVISION                     "1.0.1"
 
 #define APDU_TAG_BLE                    0x44
 
@@ -234,6 +234,10 @@
 #define BLE_BOOTLOADER_VER             0x07
 //
 #define BLE_CMD_POWER_STA              0x08
+#define BLE_INSERT_POWER               0x01
+#define BLE_REMOVE_POWER               0x02
+#define BLE_CHARGING_PWR               0x03
+#define BLE_CHAGE_OVER                 0x04
 //
 #define BLE_SYSTEM_POWER_PERCENT       0x09
 //
@@ -351,9 +355,11 @@ static char ble_adv_name[ADV_NAME_LENGTH];
 
 extern rtc_date_t rtc_date;
 
-static volatile uint8_t	bat_level_to_st=0xff;
+static uint8_t	bat_level_to_st=0xff;
+static uint8_t	bat_level_flag=0;
 static uint8_t	read_flag=0;
 static uint8_t	backup_bat_level=0xff;
+
 
 #ifdef BOND_ENABLE
 static pm_peer_id_t m_peer_to_be_deleted = PM_PEER_ID_INVALID;
@@ -399,7 +405,6 @@ static uint8_t battery_percent=0;
 //AXP216 global status
 static uint8_t g_vbus_status = 0;
 static uint8_t g_charge_status = 0;
-static uint8_t g_battery_status = 0;
 static uint8_t g_key_status = 0;
 
 #ifdef SCHED_ENABLE
@@ -1809,7 +1814,7 @@ static void usr_uart_init(void)
                        UART_RX_BUF_SIZE,
                        UART_TX_BUF_SIZE,
                        uart_event_handle,
-                       _PRIO_APP_LOW_MID,
+                       _PRIO_SD_LOW,
                        err_code);
     APP_ERROR_CHECK(err_code);
 }
@@ -2012,8 +2017,7 @@ void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
                 enter_low_power_mode();
             }   
             break;
-        case POWER_IC_IRQ_IO:
-            uint8_t buff[4];
+        case POWER_IC_IRQ_IO:            
             g_vbus_status = get_irq_vbus_status();
             buff[0] = g_vbus_status;
             uart_put_data(buff,1);
@@ -2039,13 +2043,14 @@ static void gpiote_init(void)
 
     err_code = nrf_drv_gpiote_in_init(SLAVE_SPI_RSP_IO, &in_config, in_gpiote_handler);
     APP_ERROR_CHECK(err_code);
+    nrf_drv_gpiote_in_event_enable(SLAVE_SPI_RSP_IO, true);
+    
     err_code = nrf_drv_gpiote_in_init(POWER_IC_OK_IO, &in_config, in_gpiote_handler);
     APP_ERROR_CHECK(err_code);
-    err_code = nrf_drv_gpiote_in_init(POWER_IC_IRQ_IO, &in_config, in_gpiote_handler);
-    APP_ERROR_CHECK(err_code);
-
-    nrf_drv_gpiote_in_event_enable(SLAVE_SPI_RSP_IO, true);
     nrf_drv_gpiote_in_event_enable(POWER_IC_OK_IO, true);
+    
+    err_code = nrf_drv_gpiote_in_init(POWER_IC_IRQ_IO, &in_config, in_gpiote_handler);
+    APP_ERROR_CHECK(err_code);        
     nrf_drv_gpiote_in_event_enable(POWER_IC_IRQ_IO, true);
 }
 

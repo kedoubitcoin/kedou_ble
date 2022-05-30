@@ -14,6 +14,7 @@ ret_code_t usr_power_init(void)
     nrf_delay_ms(2000);
     open_all_power();
 
+    clear_irq_reg();
     return ret;
 }
 
@@ -80,10 +81,10 @@ uint8_t get_irq_vbus_status(void)
     
     axp216_read(AXP_INTSTS1,1,&reg);
     NRF_LOG_INFO("vbus status %d ",reg);
-    if(reg & IRQ_VBUS_INSERT == IRQ_VBUS_INSERT){
-        vbus_status = IRQ_VBUS_INSERT;
-    }else if(reg & IRQ_VBUS_REMOVE == IRQ_VBUS_REMOVE){
-        vbus_status = IRQ_VBUS_REMOVE;
+    if(reg == IRQ_VBUS_INSERT){
+        vbus_status = 0x01;
+    }else if(reg == IRQ_VBUS_REMOVE){
+        vbus_status = 0x02;
     }
     //compare
     if(last_vbus_status != vbus_status){
@@ -114,6 +115,27 @@ uint8_t get_irq_charge_status(void)
         return 0;
     }
 }
+//REG49H 
+uint8_t get_bat_con_status(void)
+{
+    static uint8_t last_bat_con_stasus = 0;
+    uint8_t bat_con_status = 0,reg = 0;
+
+    axp216_read(AXP_INTSTS2,1,&reg);
+    NRF_LOG_INFO("bat connect status %d ",reg);
+    if(reg == 0x80){
+        last_bat_con_stasus = IRQ_CHARGING_BAT;
+    }else if(reg == 0x40){
+        last_bat_con_stasus = IRQ_CHARGE_OVER;
+    }
+    //compare
+    if(last_bat_con_stasus != bat_con_status){
+        last_bat_con_stasus = bat_con_status;
+        return last_bat_con_stasus;
+    }else{
+        return 0;
+    }
+}
 //REG4BH
 uint8_t get_irq_battery_status(void)
 {
@@ -122,9 +144,9 @@ uint8_t get_irq_battery_status(void)
 
     axp216_read(AXP_INTSTS4,1,&reg);
     NRF_LOG_INFO("battery status %d ",reg);
-    if(reg & 0x02 == 0x02){
+    if(reg == 0x02){
         bat_status = IRQ_LOW_BAT_1;
-    }else if(reg & 0x01 == 0x01){
+    }else if(reg == 0x01){
         bat_status = IRQ_LOW_BAT_2;
     }
     if(last_bat_status != bat_status){
@@ -165,4 +187,13 @@ void set_wakeup_irq(uint8_t set_value)
 	reg_val = (reg_val & ~0x10) | set_value;
    	axp216_write(AXP_VOFF_SET, reg_val);
 
+}
+
+void clear_irq_reg(void)
+{
+    axp216_write(AXP_INTSTS1,0xFF);
+    axp216_write(AXP_INTSTS2,0xFF);
+    axp216_write(AXP_INTSTS3,0xFF);
+    axp216_write(AXP_INTSTS4,0xFF);
+    axp216_write(AXP_INTSTS5,0xFF);
 }

@@ -120,7 +120,7 @@ void axp216_init(void)
 		axp_set_bits(AXP_CHARGE_VBUS, 0x03);
 	}
 
-	// set lowe power warning/shutdown level
+	// set low power warning/shutdown level
 	axp216_write( AXP_WARNING_LEVEL,((BATLOWLV1-5) << 4)+BATLOWLV2);
 
 	ocv_cap[0]  = OCVREG0;
@@ -332,6 +332,9 @@ void axp216_init(void)
 	//charger->rest_vol = (int) (val2 & 0x7F);
 
 	NRF_LOG_INFO("now_rest_CAP = %d",(val2 & 0x7F));
+
+	//Enable AXP IRQ pin 
+	axp_update(AXP_VOFF_SET, 0x10, 0x10);
 }
 
 static void axp_read_adc(struct axp_adc_res *adc)
