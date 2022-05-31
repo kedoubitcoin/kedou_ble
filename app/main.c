@@ -2036,7 +2036,7 @@ void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
                 //
                 g_charge_status = get_irq_charge_status();
 #ifdef UART_TRANS
-                if(g_key_status != 0)
+                if(g_charge_status != 0)
                 {
                     bak_buff[0] = BLE_CMD_POWER_STA;
                     bak_buff[1] = g_charge_status;
