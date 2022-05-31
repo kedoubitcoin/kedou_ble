@@ -355,10 +355,7 @@ static char ble_adv_name[ADV_NAME_LENGTH];
 
 extern rtc_date_t rtc_date;
 
-static uint8_t	bat_level_to_st=0xff;
-static uint8_t	bat_level_flag=0;
-static uint8_t	read_flag=0;
-static uint8_t	backup_bat_level=0xff;
+static volatile uint8_t	bat_level_to_st=0xff;
 
 
 #ifdef BOND_ENABLE
@@ -395,7 +392,6 @@ static void idle_state_handle(void);
 /* Dummy data to write to flash. */
 static uint32_t m_data2          = 0xBADC0FFE;
 static uint32_t m_data         = 0xABABABAB;
-static uint32_t m_data3			=0x00000001;
 static void fstorage_evt_handler(nrf_fstorage_evt_t * p_evt);
 static uint8_t bond_check_key_flag = INIT_VALUE;
 static uint8_t rcv_head_flag = 0;
@@ -405,6 +401,7 @@ static uint8_t battery_percent=0;
 //AXP216 global status
 static uint8_t g_vbus_status = 0;
 static uint8_t g_charge_status = 0;
+
 static uint8_t g_key_status = 0;
 
 #ifdef SCHED_ENABLE
@@ -2017,13 +2014,41 @@ void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
                 enter_low_power_mode();
             }   
             break;
-        case POWER_IC_IRQ_IO:            
-            g_vbus_status = get_irq_vbus_status();
-            buff[0] = g_vbus_status;
-            uart_put_data(buff,1);
-            g_charge_status = get_irq_charge_status();
-            g_battery_status = get_irq_battery_status();
-            g_key_status = get_irq_key_status();
+        case POWER_IC_IRQ_IO:
+            if(action == NRF_GPIOTE_POLARITY_TOGGLE){
+                //
+                g_vbus_status = get_irq_vbus_status();
+                if(g_vbus_status != 0)
+                {
+#ifdef UART_TRANS
+                    bak_buff[0] = BLE_CMD_POWER_STA;
+                    bak_buff[1] = g_vbus_status;
+                    send_stm_data(bak_buff,2);
+#endif
+                }
+                //
+                g_charge_status = get_irq_charge_status();
+#ifdef UART_TRANS
+                if(g_key_status != 0)
+                {
+                    bak_buff[0] = BLE_CMD_POWER_STA;
+                    bak_buff[1] = g_charge_status;
+                    send_stm_data(bak_buff,2);
+                }                
+#endif          
+                //
+                g_key_status = get_irq_key_status();
+                clear_irq_reg();
+#ifdef UART_TRANS
+                if(g_key_status != 0)
+                {
+                    bak_buff[0] = BLE_CMD_KEY_STA;
+                    bak_buff[1] = g_key_status;
+                    send_stm_data(bak_buff,2);
+                }                
+#endif
+
+            }
             break;
         default:
             break;
