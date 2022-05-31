@@ -135,6 +135,7 @@
 #define BLE_OFF_ALWAYS                  2
 #define BLE_DISCON                      3   
 #define BLE_CON                         4
+#define BLE_PAIR                        5
 
 #define PWR_DEF                         0
 #define PWR_SHUTDOWN_SYS                1
@@ -346,6 +347,7 @@ static volatile uint8_t ble_evt_flag = BLE_DEFAULT;
 uint8_t spi_evt_flag = DEFAULT_FLAG;
 volatile uint8_t ble_adv_switch_flag = BLE_DEF;
 static volatile uint8_t ble_conn_flag = BLE_DEF;
+static volatile uint8_t ble_conn_nopair_flag = BLE_DEF;
 static volatile uint8_t pwr_status_flag = PWR_DEF;
 static volatile uint8_t trans_info_flag = UART_DEF;
 static volatile uint8_t ble_trans_timer_flag=TIMER_INIT_FLAG;
@@ -803,9 +805,13 @@ static void pm_evt_handler(pm_evt_t const * p_evt)
             if (conn_sec_status.mitm_protected)
             {
 #ifdef UART_TRANS
-                bak_buff[0] = BLE_CMD_PAIR_STA;
-                bak_buff[1] = BLE_PAIR_SUCCESS;
-                send_stm_data(bak_buff,2);
+                if(ble_conn_nopair_flag == BLE_PAIR)
+                {
+                    ble_conn_nopair_flag = BLE_DEF;
+                    bak_buff[0] = BLE_CMD_PAIR_STA;
+                    bak_buff[1] = BLE_PAIR_SUCCESS;
+                    send_stm_data(bak_buff,2);
+                }                
 #endif
                 nrf_ble_gatt_data_length_set(&m_gatt,m_conn_handle,BLE_GAP_DATA_LENGTH_MAX);
                 NRF_LOG_INFO("Link secured. Role: %d. conn_handle: %d, Procedure: %d",
@@ -1488,6 +1494,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             memcpy(passkey, p_ble_evt->evt.gap_evt.params.passkey_display.passkey, PASSKEY_LENGTH);
             passkey[PASSKEY_LENGTH] = 0;
 #ifdef UART_TRANS
+            ble_conn_nopair_flag = BLE_PAIR;
             bak_buff[0] = BLE_CMD_PAIR_CODE;
             memcpy(&bak_buff[1],passkey,PASSKEY_LENGTH);
             send_stm_data(bak_buff,1+PASSKEY_LENGTH);
