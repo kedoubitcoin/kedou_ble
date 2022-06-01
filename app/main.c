@@ -398,11 +398,11 @@ static void fstorage_evt_handler(nrf_fstorage_evt_t * p_evt);
 static uint8_t bond_check_key_flag = INIT_VALUE;
 static uint8_t rcv_head_flag = 0;
 static uint8_t ble_status_flag = 0;
-static uint8_t battery_percent=0;
 
 //AXP216 global status
 static uint8_t g_vbus_status = 0;
 static uint8_t g_charge_status = 0;
+static uint8_t g_bas_update_flag=0;
 
 static uint8_t g_key_status = 0;
 
@@ -656,19 +656,28 @@ static void enter_low_power_mode(void)
 void battery_level_meas_timeout_handler(void *p_context)
 {
     ret_code_t err_code;
+    static uint8_t battery_percent=0;
 
     UNUSED_PARAMETER(p_context);
-    battery_percent = get_battery_percent();
-
-    err_code = ble_bas_battery_level_update(&m_bas, battery_percent, BLE_CONN_HANDLE_ALL);
-    if ((err_code != NRF_SUCCESS) &&
-        (err_code != NRF_ERROR_INVALID_STATE) &&
-        (err_code != NRF_ERROR_RESOURCES) &&
-        (err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING)
-       )
+    if(battery_percent != bat_level_to_st)
     {
-        APP_ERROR_HANDLER(err_code);
+        battery_percent = bat_level_to_st;
+        if(g_bas_update_flag == 1)
+        {
+            err_code = ble_bas_battery_level_update(&m_bas, battery_percent, BLE_CONN_HANDLE_ALL);
+            if ((err_code != NRF_SUCCESS) &&
+                (err_code != NRF_ERROR_INVALID_STATE) &&
+                (err_code != NRF_ERROR_RESOURCES) &&
+                (err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING)
+            )
+            {
+                APP_ERROR_HANDLER(err_code);
+            }
+        }
     }
+
+    
+    
 }
 
 static volatile uint8_t timeout_count=0;
@@ -747,11 +756,11 @@ void on_bas_evt(ble_bas_t * p_bas, ble_bas_evt_t * p_evt)
     switch (p_evt->evt_type)
     {
         case BLE_BAS_EVT_NOTIFICATION_ENABLED:
-
+            g_bas_update_flag = 1;
             break; // BLE_BAS_EVT_NOTIFICATION_ENABLED
 
         case BLE_BAS_EVT_NOTIFICATION_DISABLED:
-
+            g_bas_update_flag = 0;
             break; // BLE_BAS_EVT_NOTIFICATION_DISABLED
 
         default:
@@ -2328,6 +2337,8 @@ static void check_advertising_stop(void)
 }
 static void ble_ctl_process(void *p_event_data,uint16_t event_size)
 {
+    uint8_t respons_flag=0;
+    
     if(BLE_OFF_ALWAYS == ble_adv_switch_flag)
     {
         ble_adv_switch_flag = BLE_DEF;
@@ -2402,7 +2413,6 @@ static void ble_ctl_process(void *p_event_data,uint16_t event_size)
         send_stm_data(bak_buff,2);
     }
     //
-    uint8_t respons_flag=0;
     switch (pwr_status_flag)
     {
     case PWR_SHUTDOWN_SYS:
@@ -2429,7 +2439,7 @@ static void ble_ctl_process(void *p_event_data,uint16_t event_size)
     default:
         break;
     }
-    if(PWR_DEF != pwr_status_flag)
+    if((PWR_DEF != pwr_status_flag) && (respons_flag != 0x00))
     {
 #ifdef UART_TRANS
         bak_buff[0] = BLE_CMD_PWR_STA;
