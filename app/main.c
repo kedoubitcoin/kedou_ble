@@ -110,7 +110,7 @@
 #define MANUFACTURER_ID                 0x55AA55AA55                                /**< DUMMY Manufacturer ID. Will be passed to Device Information Service. You shall use the ID for your Company*/
 #define ORG_UNIQUE_ID                   0xEEBBEE                                    /**< DUMMY Organisation Unique ID. Will be passed to Device Information Service. You shall use the Organisation Unique ID relevant for your Company */
 #define HW_REVISION                     "1.0.0"
-#define FW_REVISION                     "1.0.0"
+#define FW_REVISION                     "1.0.2"
 #define SW_REVISION                     "s132_nrf52_7.0.1"
 #define BT_REVISION                     "1.0.1"
 
@@ -141,9 +141,8 @@
 #define PWR_SHUTDOWN_SYS                1
 #define PWR_CLOSE_EMMC                  2
 #define PWR_OPEN_EMMC                   3
-#define PWR_CLOSE_BL                    4
-#define PWR_OPEN_BL                     5
-#define PWR_BAT_PERCENT                 6
+#define PWR_BAT_PERCENT                 5
+#define PWR_USB_STATUS                  6
 
 #define NO_CHARGE                       0
 #define USB_CHARGE                      1
@@ -275,6 +274,7 @@
 #define ST_SEND_CLOSE_EMMC_PWR         0x02
 #define ST_SEND_OPEN_EMMC_PWR          0x03
 #define ST_REQ_POWER_PERCENT           0x04
+#define ST_REQ_USB_STATUS              0x05
 //
 #define ST_CMD_BLE_INFO                0x83
 #define ST_REQ_ADV_NAME                0x01
@@ -402,8 +402,8 @@ static uint8_t ble_status_flag = 0;
 //AXP216 global status
 static uint8_t g_vbus_status = 0;
 static uint8_t g_charge_status = 0;
-static uint8_t g_bas_update_flag=0;
-
+static uint8_t g_bas_update_flag = 0;
+static uint8_t g_offlevel_flag = 0;
 static uint8_t g_key_status = 0;
 
 #ifdef SCHED_ENABLE
@@ -1749,6 +1749,9 @@ void uart_event_handle(app_uart_evt_t * p_event)
                             case ST_REQ_POWER_PERCENT:
                                 pwr_status_flag = PWR_BAT_PERCENT;
                                 break;
+                            case ST_REQ_USB_STATUS:
+                                pwr_status_flag = PWR_USB_STATUS;
+                                break;
                             default:
                                 pwr_status_flag = PWR_DEF;
                                 break;
@@ -2032,38 +2035,38 @@ void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
             break;
         case POWER_IC_IRQ_IO:
             if(action == NRF_GPIOTE_POLARITY_TOGGLE){
-                //
-                g_vbus_status = get_irq_vbus_status();
-                if(g_vbus_status != 0)
-                {
-#ifdef UART_TRANS
-                    bak_buff[0] = BLE_CMD_POWER_STA;
-                    bak_buff[1] = g_vbus_status;
-                    send_stm_data(bak_buff,2);
-#endif
+                if (nrf_gpio_pin_read(POWER_IC_IRQ_IO) == 0){
+                    //
+                    g_vbus_status = get_irq_vbus_status();
+                    if(g_vbus_status != 0)
+                    {
+                        bak_buff[0] = BLE_CMD_POWER_STA;
+                        bak_buff[1] = g_vbus_status;
+                        send_stm_data(bak_buff,2);
+                    }
+                    //
+                    g_charge_status = get_irq_charge_status();
+                    if(g_charge_status != 0)
+                    {
+                        bak_buff[0] = BLE_CMD_POWER_STA;
+                        bak_buff[1] = g_charge_status;
+                        send_stm_data(bak_buff,2);
+                    }                      
+                    //
+                    g_key_status = get_irq_status();
+                    
+                    if((g_key_status != 0) && (g_key_status != 0x04))
+                    {
+                        bak_buff[0] = BLE_CMD_KEY_STA;
+                        bak_buff[1] = g_key_status;
+                    }else if(g_key_status == 0x04){
+                        g_offlevel_flag = true;
+                    }
+    #ifdef UART_TRANS
+                    send_stm_data(bak_buff,2); 
+    #endif
+                    clear_irq_reg();
                 }
-                //
-                g_charge_status = get_irq_charge_status();
-#ifdef UART_TRANS
-                if(g_charge_status != 0)
-                {
-                    bak_buff[0] = BLE_CMD_POWER_STA;
-                    bak_buff[1] = g_charge_status;
-                    send_stm_data(bak_buff,2);
-                }                
-#endif          
-                //
-                g_key_status = get_irq_key_status();
-                clear_irq_reg();
-#ifdef UART_TRANS
-                if(g_key_status != 0)
-                {
-                    bak_buff[0] = BLE_CMD_KEY_STA;
-                    bak_buff[1] = g_key_status;
-                    send_stm_data(bak_buff,2);
-                }                
-#endif
-
             }
             break;
         default:
@@ -2322,6 +2325,11 @@ static void manage_bat_level(void *p_event_data,uint16_t event_size)
         bak_buff[1] = bat_level_to_st;
         send_stm_data(bak_buff,2);
     }
+    //
+    if(g_offlevel_flag == true)
+    {
+        enter_low_power_mode();
+    }
 }
 static void check_advertising_stop(void)
 {
@@ -2422,6 +2430,7 @@ static void ble_ctl_process(void *p_event_data,uint16_t event_size)
         send_stm_data(bak_buff,2);
 #endif
         close_all_power();
+        enter_low_power_mode();
         break;
     case PWR_CLOSE_EMMC:
         respons_flag = BLE_CLOSE_EMMC;
@@ -2436,6 +2445,20 @@ static void ble_ctl_process(void *p_event_data,uint16_t event_size)
         bak_buff[0] = BLE_SYSTEM_POWER_PERCENT;
         bak_buff[1] = bat_level_to_st;
         send_stm_data(bak_buff,2);
+        break;
+    case PWR_USB_STATUS:
+        NRF_LOG_INFO("usb status, is %d ",g_vbus_status)
+        bak_buff[0] = BLE_CMD_POWER_STA;
+        if(g_vbus_status != 0)
+        {
+            bak_buff[1] = g_vbus_status;
+        }else if(g_charge_status != 0)
+        {
+            bak_buff[1] = 0x01;
+        }
+        send_stm_data(bak_buff,2);
+        pwr_status_flag =  PWR_DEF;
+        break;
     default:
         break;
     }

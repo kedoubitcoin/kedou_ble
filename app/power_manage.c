@@ -156,8 +156,8 @@ uint8_t get_irq_battery_status(void)
         return 0;
     }
 }
-//REG4CH
-uint8_t get_irq_key_status(void)
+//REG 4CH
+uint8_t get_irq_status(void)
 {
     uint8_t key_status = 0,reg = 0;
 
@@ -167,6 +167,8 @@ uint8_t get_irq_key_status(void)
         key_status = 0x01;
     }else if((reg & IRQ_LONG_PRESS) == IRQ_LONG_PRESS){
         key_status = 0x02;
+    }else if((reg & IRQ_OFF_LEVEL) == IRQ_OFF_LEVEL){
+        return IRQ_OFF_LEVEL;
     }
 
     if(key_status != 0)
