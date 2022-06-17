@@ -1751,6 +1751,7 @@ void uart_event_handle(app_uart_evt_t * p_event)
                                 break;
                             case ST_REQ_USB_STATUS:
                                 pwr_status_flag = PWR_USB_STATUS;
+                                break;
                             default:
                                 pwr_status_flag = PWR_DEF;
                                 break;
@@ -2034,37 +2035,38 @@ void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
             break;
         case POWER_IC_IRQ_IO:
             if(action == NRF_GPIOTE_POLARITY_TOGGLE){
-                //
-                g_vbus_status = get_irq_vbus_status();
-                if(g_vbus_status != 0)
-                {
-                    bak_buff[0] = BLE_CMD_POWER_STA;
-                    bak_buff[1] = g_vbus_status;
-                    send_stm_data(bak_buff,2);
+                if (nrf_gpio_pin_read(POWER_IC_IRQ_IO) == 0){
+                    //
+                    g_vbus_status = get_irq_vbus_status();
+                    if(g_vbus_status != 0)
+                    {
+                        bak_buff[0] = BLE_CMD_POWER_STA;
+                        bak_buff[1] = g_vbus_status;
+                        send_stm_data(bak_buff,2);
+                    }
+                    //
+                    g_charge_status = get_irq_charge_status();
+                    if(g_charge_status != 0)
+                    {
+                        bak_buff[0] = BLE_CMD_POWER_STA;
+                        bak_buff[1] = g_charge_status;
+                        send_stm_data(bak_buff,2);
+                    }                      
+                    //
+                    g_key_status = get_irq_status();
+                    
+                    if((g_key_status != 0) && (g_key_status != 0x04))
+                    {
+                        bak_buff[0] = BLE_CMD_KEY_STA;
+                        bak_buff[1] = g_key_status;
+                    }else if(g_key_status == 0x04){
+                        g_offlevel_flag = true;
+                    }
+    #ifdef UART_TRANS
+                    send_stm_data(bak_buff,2); 
+    #endif
+                    clear_irq_reg();
                 }
-                //
-                g_charge_status = get_irq_charge_status();
-
-                if(g_charge_status != 0)
-                {
-                    bak_buff[0] = BLE_CMD_POWER_STA;
-                    bak_buff[1] = g_charge_status;
-                    send_stm_data(bak_buff,2);
-                }                      
-                //
-                g_key_status = get_irq_status();
-                
-                if((g_key_status != 0) && (g_key_status != 0x04))
-                {
-                    bak_buff[0] = BLE_CMD_KEY_STA;
-                    bak_buff[1] = g_key_status;
-                }else if(g_key_status == 0x04){
-                    g_offlevel_flag = true;
-                }
-#ifdef UART_TRANS
-                send_stm_data(bak_buff,2); 
-#endif
-                clear_irq_reg();
             }
             break;
         default:
@@ -2443,13 +2445,20 @@ static void ble_ctl_process(void *p_event_data,uint16_t event_size)
         bak_buff[0] = BLE_SYSTEM_POWER_PERCENT;
         bak_buff[1] = bat_level_to_st;
         send_stm_data(bak_buff,2);
+        break;
     case PWR_USB_STATUS:
+        NRF_LOG_INFO("usb status, is %d ",g_vbus_status)
+        bak_buff[0] = BLE_CMD_POWER_STA;
         if(g_vbus_status != 0)
         {
-            bak_buff[0] = BLE_CMD_POWER_STA;
             bak_buff[1] = g_vbus_status;
-            send_stm_data(bak_buff,2);
+        }else if(g_charge_status != 0)
+        {
+            bak_buff[1] = 0x01;
         }
+        send_stm_data(bak_buff,2);
+        pwr_status_flag =  PWR_DEF;
+        break;
     default:
         break;
     }
