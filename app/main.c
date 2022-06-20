@@ -2447,14 +2447,16 @@ static void ble_ctl_process(void *p_event_data,uint16_t event_size)
         send_stm_data(bak_buff,2);
         break;
     case PWR_USB_STATUS:
-        NRF_LOG_INFO("usb status, is %d ",g_vbus_status)
+        axp216_read(AXP_CHARGE_STATUS,1,&g_vbus_status);
+        NRF_LOG_INFO("usb status, is %d ",g_vbus_status);
+        g_vbus_status = g_vbus_status&0x20;
         bak_buff[0] = BLE_CMD_POWER_STA;
-        if(g_vbus_status != 0)
-        {
-            bak_buff[1] = g_vbus_status;
-        }else if(g_charge_status != 0)
+        if(g_vbus_status == 0x20)
         {
             bak_buff[1] = 0x01;
+        }else if(g_charge_status == 0x02)
+        {
+            bak_buff[1] = 0x02;
         }
         send_stm_data(bak_buff,2);
         pwr_status_flag =  PWR_DEF;
