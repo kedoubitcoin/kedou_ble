@@ -571,6 +571,10 @@ static bool app_shutdown_handler(nrf_pwr_mgmt_evt_t event)
             //    APP_ERROR_CHECK(err_code);
             //}
             break;
+        case NRF_PWR_MGMT_EVT_PREPARE_WAKEUP:
+            nrf_gpio_pin_sense_t sense =  NRF_GPIO_PIN_SENSE_HIGH;
+            nrf_gpio_cfg_sense_set(POWER_IC_OK_IO,sense);
+        break;
 
         default:
             // YOUR_JOB: Implement any of the other events available from the power management module:
@@ -631,27 +635,30 @@ static void gpio_uninit(void)
 
 static void enter_low_power_mode(void)
 {
-    nrf_delay_ms(3000);
+//    nrf_delay_ms(3000);
 
-    advertising_stop();
+//    advertising_stop();
 
-    nfc_disable();
+//    nfc_disable();
 
-    app_timer_stop(m_battery_timer_id);
-    app_timer_stop(m_100ms_timer_id);
-    app_timer_stop(m_1s_timer_id);
+//    app_timer_stop(m_battery_timer_id);
+//    app_timer_stop(m_100ms_timer_id);
+//    app_timer_stop(m_1s_timer_id);
 
+//    app_uart_close();
+//    axp_disable();
+//    usr_spi_disable();
+//    usr_rtc_tick_disable();
+//    gpio_uninit();
+
+//    for(;;){
+//        
+//        // sd_power_system_off(); //stop mode rtc stoped
+//        nrf_pwr_mgmt_run();
+//    }
     app_uart_close();
-    axp_disable();
-    usr_spi_disable();
-    usr_rtc_tick_disable();
-    gpio_uninit();
-
-    for(;;){
-        
-        // sd_power_system_off(); //stop mode rtc stoped
-        nrf_pwr_mgmt_run();
-    }
+    close_all_power();
+    nrf_pwr_mgmt_shutdown(NRF_PWR_MGMT_SHUTDOWN_GOTO_SYSOFF);
 }
 void battery_level_meas_timeout_handler(void *p_context)
 {
@@ -1792,7 +1799,8 @@ void uart_event_handle(app_uart_evt_t * p_event)
             break;
 
         case APP_UART_COMMUNICATION_ERROR:
-            APP_ERROR_HANDLER(p_event->data.error_communication);
+            // APP_ERROR_HANDLER(p_event->data.error_communication);
+            NVIC_SystemReset();
             break;
 
         case APP_UART_FIFO_ERROR:
@@ -2029,8 +2037,11 @@ void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
             if(action == NRF_GPIOTE_POLARITY_LOTOHI){
                 open_all_power();
             }else if(action == NRF_GPIOTE_POLARITY_HITOLO){
-                close_all_power();
-                enter_low_power_mode();
+                nrf_delay_ms(10);
+                if(0 == nrf_gpio_pin_read(POWER_IC_OK_IO)){
+                    enter_low_power_mode();
+                }
+                
             }   
             break;
         case POWER_IC_IRQ_IO:
@@ -2429,7 +2440,6 @@ static void ble_ctl_process(void *p_event_data,uint16_t event_size)
         bak_buff[1] = BLE_CLOSE_SYSTEM;
         send_stm_data(bak_buff,2);
 #endif
-        close_all_power();
         enter_low_power_mode();
         break;
     case PWR_CLOSE_EMMC:
