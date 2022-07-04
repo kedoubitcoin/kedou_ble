@@ -2029,7 +2029,7 @@ void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
     switch(pin)
     {
         case SLAVE_SPI_RSP_IO:
-            if(action == NRF_GPIOTE_POLARITY_TOGGLE){
+            if(action == NRF_GPIOTE_POLARITY_HITOLO){
                 phone_resp_data();
             }            
             break;
@@ -2096,7 +2096,9 @@ static void gpiote_init(void)
     nrf_drv_gpiote_in_config_t in_config = NRFX_GPIOTE_CONFIG_IN_SENSE_TOGGLE(false);
     in_config.pull = NRF_GPIO_PIN_PULLUP;
 
-    err_code = nrf_drv_gpiote_in_init(SLAVE_SPI_RSP_IO, &in_config, in_gpiote_handler);
+    nrf_drv_gpiote_in_config_t in_config1 = NRFX_GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
+    in_config1.pull = NRF_GPIO_PIN_PULLUP;
+    err_code = nrf_drv_gpiote_in_init(SLAVE_SPI_RSP_IO, &in_config1, in_gpiote_handler);
     APP_ERROR_CHECK(err_code);
     nrf_drv_gpiote_in_event_enable(SLAVE_SPI_RSP_IO, true);
     

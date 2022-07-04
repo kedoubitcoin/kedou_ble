@@ -1,5 +1,6 @@
 #include "data_transmission.h"
 #include "nrf_drv_spi.h"
+#include "nrf_drv_gpiote.h"
 #include "app_error.h"
 #include "nrf_delay.h"
 
@@ -25,6 +26,13 @@ void usr_spim_init(void)
 
 void usr_spi_write(uint8_t *p_buffer, uint32_t size)  
 {  
+
+	nrf_drv_gpiote_in_event_disable(SLAVE_SPI_RSP_IO);
+
+	while(0 == nrf_gpio_pin_read(SLAVE_SPI_RSP_IO)){
+        nrf_delay_us(5);
+	}
+
 	while(true){
 		if(size<=255){
 			driver_spim_xfer.tx_length   = size;  
@@ -43,7 +51,12 @@ void usr_spi_write(uint8_t *p_buffer, uint32_t size)
 			size -= 255;
 		}
 	}
-    nrf_delay_us(10);
+
+	while(1 == nrf_gpio_pin_read(SLAVE_SPI_RSP_IO)){
+		nrf_delay_us(5);
+	}
+	nrf_drv_gpiote_in_event_enable(SLAVE_SPI_RSP_IO, true);
+
 }
 void usr_spi_read(uint8_t *p_buffer, uint32_t size)
 {
