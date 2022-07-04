@@ -2465,7 +2465,7 @@ static void ble_ctl_process(void *p_event_data,uint16_t event_size)
         bak_buff[0] = BLE_CMD_POWER_STA;
         if(g_vbus_status == 0x20)
         {
-            bak_buff[1] = 0x01;
+            bak_buff[1] = 0x03;
         }else if(g_charge_status == 0x02)
         {
             bak_buff[1] = 0x02;
