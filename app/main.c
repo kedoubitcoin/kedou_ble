@@ -398,6 +398,7 @@ static void fstorage_evt_handler(nrf_fstorage_evt_t * p_evt);
 static uint8_t bond_check_key_flag = INIT_VALUE;
 static uint8_t rcv_head_flag = 0;
 static uint8_t ble_status_flag = 0;
+static bool ble_send_ready = false;
 
 //AXP216 global status
 static uint8_t g_vbus_status = 0;
@@ -1942,15 +1943,20 @@ static void ble_resp_data(void)
     ret_code_t err_code;
     uint16_t length = 0;
     uint16_t offset = 0;
+
+    if(!ble_send_ready)return;
+    ble_send_ready = false;
     
     while(data_recived_len>m_ble_nus_max_data_len)
     {
         length = m_ble_nus_max_data_len;
-        NRF_LOG_INFO("1----data lenth %d \n",data_recived_len);
-        NRF_LOG_HEXDUMP_DEBUG(data_recived_buf,64);
         do
         {
             err_code = ble_nus_data_send(&m_nus, data_recived_buf+offset, &length, m_conn_handle);
+            if(err_code == NRF_ERROR_INVALID_STATE){
+                data_recived_len = 0;
+                return;
+            }
             if ((err_code != NRF_ERROR_INVALID_STATE) &&
               (err_code != NRF_ERROR_RESOURCES) &&
               (err_code != NRF_ERROR_NOT_FOUND))
@@ -1964,9 +1970,7 @@ static void ble_resp_data(void)
             }
         } while (err_code == NRF_ERROR_RESOURCES);                
     }
-     NRF_LOG_INFO("2----data lenth %d\n",data_recived_len);
-     NRF_LOG_HEXDUMP_DEBUG(data_recived_buf+offset,data_recived_len); 
-    
+        
     if(data_recived_len)
     {
         length = data_recived_len;
@@ -1995,9 +1999,11 @@ static void phone_resp_data(void)
 
     data_recived_flag = false;
     spi_evt_flag = READ_SPI_DATA;
+
     //response data
-    ble_resp_data();
+    // ble_resp_data();
     spi_evt_flag = DEFAULT_FLAG;
+    ble_send_ready = true;
     RST_ONE_SECNOD_COUNTER();
 }
 
@@ -2029,9 +2035,11 @@ void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
     switch(pin)
     {
         case SLAVE_SPI_RSP_IO:
-            if(action == NRF_GPIOTE_POLARITY_HITOLO){
+            if(spi_dir_out){
+                spi_send_done = true;
+            }else{
                 phone_resp_data();
-            }            
+            } 
             break;
         case POWER_IC_OK_IO:
             if(action == NRF_GPIOTE_POLARITY_LOTOHI){
@@ -2497,6 +2505,7 @@ static void main_loop(void)
 	app_sched_event_put(NULL,NULL,rsp_st_uart_cmd);
 	app_sched_event_put(NULL,NULL,manage_bat_level);
 	app_sched_event_put(NULL,NULL,nfc_poll);
+    app_sched_event_put(NULL,NULL,ble_resp_data);
 }
 
 int main(void)

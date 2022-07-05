@@ -10,6 +10,9 @@ static nrfx_spim_xfer_desc_t     driver_spim_xfer;
 static uint8_t                  driver_spi_rx_buf[256];
 static uint8_t 					driver_spi_tx_buf[256];
 
+bool spi_dir_out = false;
+bool spi_send_done = false;
+
 void usr_spim_init(void)
 {
     ret_code_t err_code;
@@ -27,11 +30,7 @@ void usr_spim_init(void)
 void usr_spi_write(uint8_t *p_buffer, uint32_t size)  
 {  
 
-	nrf_drv_gpiote_in_event_disable(SLAVE_SPI_RSP_IO);
-
-	while(0 == nrf_gpio_pin_read(SLAVE_SPI_RSP_IO)){
-        nrf_delay_us(5);
-	}
+	spi_dir_out = true;
 
 	while(true){
 		if(size<=255){
@@ -51,12 +50,17 @@ void usr_spi_write(uint8_t *p_buffer, uint32_t size)
 			size -= 255;
 		}
 	}
-
-	while(1 == nrf_gpio_pin_read(SLAVE_SPI_RSP_IO)){
-		nrf_delay_us(5);
+	
+	uint32_t timeout = 100000;
+	while(!spi_send_done){
+		timeout--;
+		if(timeout == 0){
+			break;
+		}
+		nrf_delay_us(1);
 	}
-	nrf_drv_gpiote_in_event_enable(SLAVE_SPI_RSP_IO, true);
-
+	spi_send_done = false;
+	spi_dir_out = false;
 }
 void usr_spi_read(uint8_t *p_buffer, uint32_t size)
 {
@@ -65,6 +69,7 @@ void usr_spi_read(uint8_t *p_buffer, uint32_t size)
 	driver_spim_xfer.rx_length   = size;
 	driver_spim_xfer.p_rx_buffer = p_buffer;
 	APP_ERROR_CHECK(nrfx_spim_xfer(&m_spim_master, &driver_spim_xfer, 0));
+	// NRF_LOG_HEXDUMP_INFO(p_buffer, size);
 }
 
 //Disable spi mode to enter low power mode
