@@ -1963,6 +1963,10 @@ static void ble_resp_data(void)
             {
                 APP_ERROR_CHECK(err_code);
             }
+            if(err_code == NRF_ERROR_INVALID_STATE)
+            {
+                return;
+            }
             if (err_code == NRF_SUCCESS)
             {
                 data_recived_len -=m_ble_nus_max_data_len;
