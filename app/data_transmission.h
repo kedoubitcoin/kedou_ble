@@ -20,6 +20,8 @@
 
 #define SPI_INSTANCE                2
 
+extern bool spi_dir_out;
+extern bool spi_send_done;
 
 void usr_spim_init(void);
 
