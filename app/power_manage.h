@@ -42,6 +42,8 @@ extern void ctl_emmc_power(uint8_t value);
 
 extern uint8_t get_battery_percent(void);
 
+extern uint8_t get_charge_status(void);
+
 extern uint8_t get_irq_vbus_status(void);
 
 extern uint8_t get_irq_charge_status(void);
