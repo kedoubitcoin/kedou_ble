@@ -2326,7 +2326,7 @@ static void rsp_st_uart_cmd(void *p_event_data,uint16_t event_size)
 }
 static void manage_bat_level(void *p_event_data,uint16_t event_size)
 {  
-    static uint8_t bak_bat_persent=0xff;
+    static uint8_t bak_bat_persent=0x00;
 
     if(bak_bat_persent != bat_level_to_st)
     {
