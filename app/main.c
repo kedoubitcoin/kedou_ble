@@ -357,7 +357,7 @@ static char ble_adv_name[ADV_NAME_LENGTH];
 
 extern rtc_date_t rtc_date;
 
-static volatile uint8_t	bat_level_to_st=0xff;
+static volatile uint8_t	bat_level_to_st=0x00;
 
 
 #ifdef BOND_ENABLE
@@ -401,7 +401,6 @@ static uint8_t ble_status_flag = 0;
 static bool ble_send_ready = false;
 
 //AXP216 global status
-static uint8_t g_vbus_status = 0;
 static uint8_t g_charge_status = 0;
 static uint8_t g_bas_update_flag = 0;
 static uint8_t g_offlevel_flag = 0;
@@ -1162,8 +1161,8 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
 
     if (p_evt->type == BLE_NUS_EVT_RX_DATA)
     {
-        //NRF_LOG_INFO("Received data from BLE NUS.");
-        //NRF_LOG_HEXDUMP_DEBUG(p_evt->params.rx_data.p_data, p_evt->params.rx_data.length);
+        // NRF_LOG_INFO("Received data from BLE NUS.");
+        // NRF_LOG_HEXDUMP_DEBUG(p_evt->params.rx_data.p_data, p_evt->params.rx_data.length);
         data_recived_len = p_evt->params.rx_data.length;
         memcpy(data_recived_buf,(uint8_t *)p_evt->params.rx_data.p_data,data_recived_len);
 
@@ -2057,40 +2056,26 @@ void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
             }   
             break;
         case POWER_IC_IRQ_IO:
-            if(action == NRF_GPIOTE_POLARITY_TOGGLE){
-                if (nrf_gpio_pin_read(POWER_IC_IRQ_IO) == 0){
-                    //
-                    g_vbus_status = get_irq_vbus_status();
-                    if(g_vbus_status != 0)
-                    {
-                        bak_buff[0] = BLE_CMD_POWER_STA;
-                        bak_buff[1] = g_vbus_status;
-                        send_stm_data(bak_buff,2);
-                    }
-                    //
-                    g_charge_status = get_irq_charge_status();
-                    if(g_charge_status != 0)
-                    {
-                        bak_buff[0] = BLE_CMD_POWER_STA;
-                        bak_buff[1] = g_charge_status;
-                        send_stm_data(bak_buff,2);
-                    }                      
-                    //
-                    g_key_status = get_irq_status();
+            static uint8_t last_charge_status;
+            g_charge_status = get_charge_status();
+            if(last_charge_status != g_charge_status){
+                last_charge_status = g_charge_status;
+                bak_buff[0] = BLE_CMD_POWER_STA;
+                bak_buff[1] = g_charge_status;
+                send_stm_data(bak_buff,2);
+            }                     
+            //
+            g_key_status = get_irq_status();
                     
-                    if((g_key_status != 0) && (g_key_status != 0x04))
-                    {
-                        bak_buff[0] = BLE_CMD_KEY_STA;
-                        bak_buff[1] = g_key_status;
-                    }else if(g_key_status == 0x04){
-                        g_offlevel_flag = true;
-                    }
-    #ifdef UART_TRANS
-                    send_stm_data(bak_buff,2); 
-    #endif
-                    clear_irq_reg();
-                }
+            if((g_key_status != 0) && (g_key_status != 0x04))
+            {
+                bak_buff[0] = BLE_CMD_KEY_STA;
+                bak_buff[1] = g_key_status;
+                send_stm_data(bak_buff,2); 
+            }else if(g_key_status == 0x04){
+                g_offlevel_flag = true;
             }
+            clear_irq_reg();
             break;
         default:
             break;
@@ -2118,7 +2103,7 @@ static void gpiote_init(void)
     APP_ERROR_CHECK(err_code);
     nrf_drv_gpiote_in_event_enable(POWER_IC_OK_IO, true);
     
-    err_code = nrf_drv_gpiote_in_init(POWER_IC_IRQ_IO, &in_config, in_gpiote_handler);
+    err_code = nrf_drv_gpiote_in_init(POWER_IC_IRQ_IO, &in_config1, in_gpiote_handler);
     APP_ERROR_CHECK(err_code);        
     nrf_drv_gpiote_in_event_enable(POWER_IC_IRQ_IO, true);
 }
@@ -2467,21 +2452,12 @@ static void ble_ctl_process(void *p_event_data,uint16_t event_size)
     case PWR_BAT_PERCENT:
         pwr_status_flag = PWR_DEF;
         bak_buff[0] = BLE_SYSTEM_POWER_PERCENT;
-        bak_buff[1] = bat_level_to_st;
+        bak_buff[1] = get_battery_percent();
         send_stm_data(bak_buff,2);
         break;
     case PWR_USB_STATUS:
-        axp216_read(AXP_CHARGE_STATUS,1,&g_vbus_status);
-        NRF_LOG_INFO("usb status, is %d ",g_vbus_status);
-        g_vbus_status = g_vbus_status&0x20;
         bak_buff[0] = BLE_CMD_POWER_STA;
-        if(g_vbus_status == 0x20)
-        {
-            bak_buff[1] = 0x03;
-        }else if(g_charge_status == 0x02)
-        {
-            bak_buff[1] = 0x02;
-        }
+        bak_buff[1] =get_charge_status();
         send_stm_data(bak_buff,2);
         pwr_status_flag =  PWR_DEF;
         break;
