@@ -2,6 +2,10 @@
 
 # Nordic nRF52832环境搭建和编译步骤
 
+**SDK版本**
+
+基于Nordic官方的nRF5_SDK_16.0.0开发，softdevice使用的版本为s132_nrf52_7.0.1_softdevice。
+
 **安装MDK**
 
 MDK 是 Microcontroller Development Kit 的缩写，我们用这个开发环境来开发、调试、仿真Nordic芯片的程序。
