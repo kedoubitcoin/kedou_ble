@@ -693,6 +693,8 @@ static volatile uint16_t timeout_longcnt=0;
 void m_100ms_timeout_hander(void * p_context)
 {
     UNUSED_PARAMETER(p_context);
+
+    nrf_drv_wdt_channel_feed(m_channel_id);
         
     if(TIMER_RESET_FLAG == ble_trans_timer_flag)
     {
@@ -2488,6 +2490,17 @@ static void main_loop(void)
     app_sched_event_put(NULL,NULL,ble_resp_data);
 }
 
+static void watch_dog_init(void){
+    uint32_t err_code = NRF_SUCCESS;
+    //Configure WDT.
+    nrf_drv_wdt_config_t config = NRF_DRV_WDT_DEAFULT_CONFIG;
+    err_code = nrf_drv_wdt_init(&config, NULL);
+    APP_ERROR_CHECK(err_code);
+    err_code = nrf_drv_wdt_channel_alloc(&m_channel_id);
+    APP_ERROR_CHECK(err_code);
+    nrf_drv_wdt_enable();
+}
+
 int main(void)
 {    
 #ifdef BUTTONLESS_ENABLED
@@ -2524,6 +2537,7 @@ int main(void)
     ctl_advertising();	    
 	
     nfc_init();
+    watch_dog_init();
 
     // Enter main loop.
     for (;;)
