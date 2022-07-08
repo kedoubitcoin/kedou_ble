@@ -32,9 +32,9 @@ git checkout bixin
 
 **编译Nordic设备bootloader和firmware**
 
-**bootloader:**使用MDK打开根目录下的dfu文件夹下的secure_bootloader_ble_s132_pca10040.uvprojx文件。打开工程文件后按F7键或点击“Build”按钮执行编译过程。执行完毕后在\dfu\_build文件夹下生成nrf52832_xxaa_s132.hex文件为bootloader文件。
+bootloader:使用MDK打开根目录下的dfu文件夹下的secure_bootloader_ble_s132_pca10040.uvprojx文件。打开工程文件后按F7键或点击“Build”按钮执行编译过程。执行完毕后在\dfu\_build文件夹下生成nrf52832_xxaa_s132.hex文件为bootloader文件。
 
-**firmware:**使用MDK打开根目录下的project文件夹下的ble_nfc.uvprojx文件，打开工程文件后按F7键（或点击“Build”按钮）执行编译过程。执行完毕后在\project\_build文件夹下生成nrf52832_xxaa.hex文件为firmware文件
+firmware:使用MDK打开根目录下的project文件夹下的ble_nfc.uvprojx文件，打开工程文件后按F7键（或点击“Build”按钮）执行编译过程。执行完毕后在\project\_build文件夹下生成nrf52832_xxaa.hex文件为firmware文件
 
 **编译在线调试版本**
 
