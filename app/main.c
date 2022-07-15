@@ -1799,14 +1799,13 @@ void uart_event_handle(app_uart_evt_t * p_event)
                 index=0;
             }            
             break;
-
+        // ignore uart error
         case APP_UART_COMMUNICATION_ERROR:
             // APP_ERROR_HANDLER(p_event->data.error_communication);
-            NVIC_SystemReset();
             break;
 
         case APP_UART_FIFO_ERROR:
-            APP_ERROR_HANDLER(p_event->data.error_code);
+            // APP_ERROR_HANDLER(p_event->data.error_code);
             break;
 
         default:
@@ -2069,12 +2068,12 @@ void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
             //
             g_key_status = get_irq_status();
                     
-            if((g_key_status != 0) && (g_key_status != 0x04))
+            if(g_key_status == 0x01)
             {
                 bak_buff[0] = BLE_CMD_KEY_STA;
                 bak_buff[1] = g_key_status;
                 send_stm_data(bak_buff,2); 
-            }else if(g_key_status == 0x04){
+            }else if(g_key_status == 0x02){
                 g_offlevel_flag = true;
             }
             clear_irq_reg();
@@ -2101,9 +2100,9 @@ static void gpiote_init(void)
     APP_ERROR_CHECK(err_code);
     nrf_drv_gpiote_in_event_enable(SLAVE_SPI_RSP_IO, true);
     
-    err_code = nrf_drv_gpiote_in_init(POWER_IC_OK_IO, &in_config, in_gpiote_handler);
-    APP_ERROR_CHECK(err_code);
-    nrf_drv_gpiote_in_event_enable(POWER_IC_OK_IO, true);
+    // err_code = nrf_drv_gpiote_in_init(POWER_IC_OK_IO, &in_config, in_gpiote_handler);
+    // APP_ERROR_CHECK(err_code);
+    // nrf_drv_gpiote_in_event_enable(POWER_IC_OK_IO, true);
     
     err_code = nrf_drv_gpiote_in_init(POWER_IC_IRQ_IO, &in_config1, in_gpiote_handler);
     APP_ERROR_CHECK(err_code);        
