@@ -24,7 +24,7 @@
 
 /*电池容量，mAh：根据实际电池容量来定义，对库仑计方法来说
 这个参数很重要，必须配置*/
-#define BATCAP				800
+#define BATCAP				3200
 
 /*初始化电池内阻，mΩ：一般在100~200之间，不过最好根据实际
 测试出来的确定，方法是打开打印信息，不接电池烧好固件后，
@@ -45,7 +45,7 @@
 		AXP:300~2550,100/step
 */
 /*充电电流，uA*/
-#define STACHGCUR			300*1000
+#define STACHGCUR			1500*1000
 
 
 /*目标充电电压，mV*/
@@ -58,7 +58,7 @@
 /*
 	AXP:10\15
 */
-#define ENDCHGRATE			10
+#define ENDCHGRATE			15
 /*关机电压，mV*/
 /*
 	系统设计的关机过后的电池端电压，需要与关机百分比、
@@ -76,7 +76,7 @@
 /*
 	AXP:40\50\60\70
 */
-#define CHGPRETIME			50
+#define CHGPRETIME			40
 /*恒流充电超时时间，min*/
 /*
 	AXP:360\480\600\720
@@ -136,12 +136,12 @@
 /*
 	AXP:4000~4700，100/step
 */
-#define USBVOLLIM			4500
+#define USBVOLLIM			4200
 /*  USB充电限压，mV，0为不限制*/
 /*
 	AXP:4000~4700，100/step
 */
-//#define USBVOLLIMPC			4700
+//#define USBVOLLIMPC			4200
 
 /* 充电电流限制使能*/
 /*
@@ -152,7 +152,7 @@
 /*
 	AXP:500/900
 */
-#define USBCURLIM			500
+#define USBCURLIM			900
 /* usb 充电限流，mA，0为不限制*/
 /*
 	AXP:500/900
@@ -208,13 +208,13 @@
 	根据系统设计来定：
 	AXP:5%~20%
 */
-#define BATLOWLV1    15
+#define BATLOWLV1    10
 /*低电警告电压2，%*/
 /*
 	根据系统设计来定：
 	AXP:0%~15%
 */
-#define BATLOWLV2    0
+#define BATLOWLV2    5
 
 #define ABS(x)				((x) >0 ? (x) : -(x) )
 
@@ -228,35 +228,35 @@
 */
 #define OCVREG0				0		 			//3.13V
 #define OCVREG1				0		 			//3.27V
-#define OCVREG2				5		 			//3.34V
-#define OCVREG3				8		 			//3.41V
-#define OCVREG4				9		 			//3.48V
-#define OCVREG5				10		 			//3.52V
-#define OCVREG6				13		 			//3.55V
-#define OCVREG7				15		 			//3.57V
-#define OCVREG8				17		 			//3.59V
-#define OCVREG9				19		 			//3.61V
+#define OCVREG2				0		 			//3.34V
+#define OCVREG3				1		 			//3.41V
+#define OCVREG4				5		 			//3.48V
+#define OCVREG5				9		 			//3.52V
+#define OCVREG6				12		 			//3.55V
+#define OCVREG7				14		 			//3.57V
+#define OCVREG8				16		 			//3.59V
+#define OCVREG9				18		 			//3.61V
 #define OCVREGA				20		 			//3.63V
 #define OCVREGB				22		 			//3.64V
 #define OCVREGC				24		 			//3.66V
 #define OCVREGD				26		 			//3.7V
 #define OCVREGE				28		 			//3.73V
-#define OCVREGF				33		 			//3.77V
-#define OCVREG10		 	41                	//3.78V
-#define OCVREG11		 	46                	//3.8V
-#define OCVREG12		 	50                	//3.82V
-#define OCVREG13		 	53                	//3.84V
-#define OCVREG14		 	57                	//3.85V
-#define OCVREG15		 	61                	//3.87V
-#define OCVREG16		 	67                	//3.91V
-#define OCVREG17		 	73                	//3.94V
-#define OCVREG18		 	78                	//3.98V
-#define OCVREG19		 	84                	//4.01V
-#define OCVREG1A		 	88                	//4.05V
-#define OCVREG1B		 	92                	//4.08V
+#define OCVREGF				30		 			//3.77V
+#define OCVREG10		 	34                	//3.78V
+#define OCVREG11		 	38                	//3.8V
+#define OCVREG12		 	42                	//3.82V
+#define OCVREG13		 	46                	//3.84V
+#define OCVREG14		 	50                	//3.85V
+#define OCVREG15		 	56                	//3.87V
+#define OCVREG16		 	62                	//3.91V
+#define OCVREG17		 	68                	//3.94V
+#define OCVREG18		 	74                	//3.98V
+#define OCVREG19		 	80                	//4.01V
+#define OCVREG1A		 	84                	//4.05V
+#define OCVREG1B		 	90                	//4.08V
 #define OCVREG1C		 	93                	//4.1V
-#define OCVREG1D		 	94                	//4.12V
-#define OCVREG1E		 	95                	//4.14V
+#define OCVREG1D		 	96                	//4.12V
+#define OCVREG1E		 	98                	//4.14V
 #define OCVREG1F		 	100                	//4.15V
 
 /*选择需要打开的中断使能*/
