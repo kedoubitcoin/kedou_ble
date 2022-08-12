@@ -628,10 +628,10 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
     app_error_handler(DEAD_BEEF, line_num, p_file_name);
 }                                             /**< Structure used to identify the battery service. */
 
-static void gpio_uninit(void)
-{
-    nrf_drv_gpiote_uninit();
-}
+// static void gpio_uninit(void)
+// {
+//     nrf_drv_gpiote_uninit();
+// }
 
 static void enter_low_power_mode(void)
 {
@@ -2036,6 +2036,7 @@ static void idle_state_handle(void)
 
 void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 {
+	static uint8_t last_charge_status;
     switch(pin)
     {
         case SLAVE_SPI_RSP_IO:
@@ -2057,7 +2058,7 @@ void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
             }   
             break;
         case POWER_IC_IRQ_IO:
-            static uint8_t last_charge_status;
+            
             g_charge_status = get_charge_status();
             if(last_charge_status != g_charge_status){
                 last_charge_status = g_charge_status;
@@ -2091,8 +2092,8 @@ static void gpiote_init(void)
     err_code = nrf_drv_gpiote_init();
     APP_ERROR_CHECK(err_code);
 
-    nrf_drv_gpiote_in_config_t in_config = NRFX_GPIOTE_CONFIG_IN_SENSE_TOGGLE(false);
-    in_config.pull = NRF_GPIO_PIN_PULLUP;
+    //nrf_drv_gpiote_in_config_t in_config = NRFX_GPIOTE_CONFIG_IN_SENSE_TOGGLE(false);
+    //in_config.pull = NRF_GPIO_PIN_PULLUP;
 
     nrf_drv_gpiote_in_config_t in_config1 = NRFX_GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
     in_config1.pull = NRF_GPIO_PIN_PULLUP;
