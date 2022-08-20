@@ -607,7 +607,7 @@ static void saadc_event_handler(nrf_drv_saadc_evt_t const * p_evt)
         if(m_last_volts == 0)
         {
         	NRF_LOG_INFO("m_last_volts----0");        	
-	        if(m_batt_lvl_in_milli_volts> 2000 && m_batt_lvl_in_milli_volts<3500)
+	        if(m_batt_lvl_in_milli_volts> 2000 && m_batt_lvl_in_milli_volts<=3600)
 	        {
             	m_last_volts = m_batt_lvl_in_milli_volts;
             	NRF_LOG_INFO("-2 voltage is   %u mV",m_batt_lvl_in_milli_volts);
@@ -626,7 +626,7 @@ static void saadc_event_handler(nrf_drv_saadc_evt_t const * p_evt)
         }
         if(usb_ins_flag == USB_CHARGE)
         {        			
-        	if(m_batt_lvl_in_milli_volts > 2000 && m_batt_lvl_in_milli_volts < 3500)
+        	if(m_batt_lvl_in_milli_volts > 2000 && m_batt_lvl_in_milli_volts <= 3600)
         	{
         		m_batt_lvl_in_milli_volts -= 100;
         	}else
