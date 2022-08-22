@@ -30,7 +30,7 @@
 测试出来的确定，方法是打开打印信息，不接电池烧好固件后，
 上电池，不接充电器，开机，开机1分钟后，接上充电器，充
 1~2分钟，看打印信息中的rdc值，填入这里*/
-#define BATRDC				120
+#define BATRDC				99
 
 /*开路电压方法中的电池电压的缓存*/
 //#define AXP_VOL_MAX			1
@@ -238,23 +238,23 @@
 #define OCVREG9				18		 			//3.61V
 #define OCVREGA				20		 			//3.63V
 #define OCVREGB				22		 			//3.64V
-#define OCVREGC				24		 			//3.66V
-#define OCVREGD				26		 			//3.7V
-#define OCVREGE				28		 			//3.73V
-#define OCVREGF				30		 			//3.77V
-#define OCVREG10		 	34                	//3.78V
-#define OCVREG11		 	38                	//3.8V
-#define OCVREG12		 	42                	//3.82V
-#define OCVREG13		 	46                	//3.84V
-#define OCVREG14		 	50                	//3.85V
-#define OCVREG15		 	56                	//3.87V
-#define OCVREG16		 	62                	//3.91V
-#define OCVREG17		 	68                	//3.94V
-#define OCVREG18		 	74                	//3.98V
-#define OCVREG19		 	80                	//4.01V
-#define OCVREG1A		 	84                	//4.05V
-#define OCVREG1B		 	90                	//4.08V
-#define OCVREG1C		 	93                	//4.1V
+#define OCVREGC				26		 			//3.66V
+#define OCVREGD				30		 			//3.7V
+#define OCVREGE				35		 			//3.73V
+#define OCVREGF				40		 			//3.77V
+#define OCVREG10		 	45                	//3.78V
+#define OCVREG11		 	50                	//3.8V
+#define OCVREG12		 	55                	//3.82V
+#define OCVREG13		 	60                	//3.84V
+#define OCVREG14		 	65                	//3.85V
+#define OCVREG15		 	70                	//3.87V
+#define OCVREG16		 	75                	//3.91V
+#define OCVREG17		 	80                	//3.94V
+#define OCVREG18		 	83                	//3.98V
+#define OCVREG19		 	86                	//4.01V
+#define OCVREG1A		 	90                	//4.05V
+#define OCVREG1B		 	92                	//4.08V
+#define OCVREG1C		 	94                	//4.1V
 #define OCVREG1D		 	96                	//4.12V
 #define OCVREG1E		 	98                	//4.14V
 #define OCVREG1F		 	100                	//4.15V
