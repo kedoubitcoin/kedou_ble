@@ -2069,7 +2069,7 @@ void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
             //
             g_key_status = get_irq_status();
                     
-            if(g_key_status == 0x01)
+            if((g_key_status == 0x01)||(g_key_status == 0x02))
             {
                 bak_buff[0] = BLE_CMD_KEY_STA;
                 bak_buff[1] = g_key_status;
@@ -2340,7 +2340,7 @@ static void manage_bat_level(void *p_event_data,uint16_t event_size)
     //
     if(g_offlevel_flag == true)
     {
-        enter_low_power_mode();
+        g_offlevel_flag = false;
     }
 }
 static void check_advertising_stop(void)
