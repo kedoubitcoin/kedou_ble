@@ -545,7 +545,6 @@ static uint32_t get_ringBuffer_length(ringbuffer_t *ringBuf)
  */
 static bool app_shutdown_handler(nrf_pwr_mgmt_evt_t event)
 {
-    nrf_gpio_pin_sense_t sense;
     switch (event)
     {
         case NRF_PWR_MGMT_EVT_PREPARE_DFU:
@@ -573,7 +572,7 @@ static bool app_shutdown_handler(nrf_pwr_mgmt_evt_t event)
             //}
             break;
         case NRF_PWR_MGMT_EVT_PREPARE_WAKEUP:
-            sense =  NRF_GPIO_PIN_SENSE_HIGH;
+            nrf_gpio_pin_sense_t sense =  NRF_GPIO_PIN_SENSE_HIGH;
             nrf_gpio_cfg_sense_set(POWER_IC_OK_IO,sense);
         break;
 
@@ -742,15 +741,9 @@ void m_1s_timeout_hander(void * p_context)
 
     one_second_counter++;
 
-    if(((one_second_counter%2) == 0)&&(1 == nrf_gpio_pin_read(ST_BOOT_IO)))
-    {
-        CLEAR_ST_BOOT_IO();
-        // NRF_LOG_INFO("CLEAR BOOT IO");
-    }
-
     if((one_second_counter%5) == 0)
     {
-        bat_level_to_st = get_battery_percent();
+        bat_level_to_st = get_battery_percent();        
     }
 
     if(one_second_counter >59)
@@ -2076,15 +2069,13 @@ void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
             //
             g_key_status = get_irq_status();
                     
-            if((g_key_status == 0x01)||(g_key_status == 0x02))
+            if(g_key_status == 0x01)
             {
                 bak_buff[0] = BLE_CMD_KEY_STA;
                 bak_buff[1] = g_key_status;
                 send_stm_data(bak_buff,2); 
-                if(g_key_status == 0x02)
-                {
-                    g_offlevel_flag = true;
-                }
+            }else if(g_key_status == 0x02){
+                g_offlevel_flag = true;
             }
             clear_irq_reg();
             break;
@@ -2122,7 +2113,6 @@ static void gpiote_init(void)
 static void gpio_init(void)
 {
     gpiote_init();
-    CLEAR_ST_BOOT_IO();
 }
 #ifdef UART_TRANS
 static uint8_t calcXor(uint8_t *buf, uint8_t len)
@@ -2350,9 +2340,7 @@ static void manage_bat_level(void *p_event_data,uint16_t event_size)
     //
     if(g_offlevel_flag == true)
     {
-        g_offlevel_flag = false;
-        SET_ST_BOOT_IO();
-        NRF_LOG_INFO("SET BOOT IO");
+        enter_low_power_mode();
     }
 }
 static void check_advertising_stop(void)
