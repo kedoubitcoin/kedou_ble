@@ -32,12 +32,6 @@
 #define AXP_CLOSE_BL     0x00
 #define AXP_OPEN_BL      0x80
 
-#define ST_BOOT_IO       21
-
-#define SET_ST_BOOT_IO()            nrf_gpio_pin_write(ST_BOOT_IO, 1)
-#define CLEAR_ST_BOOT_IO()          nrf_gpio_pin_write(ST_BOOT_IO, 0)
-
-
 extern ret_code_t usr_power_init(void);
 
 extern ret_code_t open_all_power(void);
