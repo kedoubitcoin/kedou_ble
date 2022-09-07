@@ -545,6 +545,7 @@ static uint32_t get_ringBuffer_length(ringbuffer_t *ringBuf)
  */
 static bool app_shutdown_handler(nrf_pwr_mgmt_evt_t event)
 {
+    nrf_gpio_pin_sense_t sense;
     switch (event)
     {
         case NRF_PWR_MGMT_EVT_PREPARE_DFU:
@@ -572,7 +573,7 @@ static bool app_shutdown_handler(nrf_pwr_mgmt_evt_t event)
             //}
             break;
         case NRF_PWR_MGMT_EVT_PREPARE_WAKEUP:
-            nrf_gpio_pin_sense_t sense =  NRF_GPIO_PIN_SENSE_HIGH;
+            sense =  NRF_GPIO_PIN_SENSE_HIGH;
             nrf_gpio_cfg_sense_set(POWER_IC_OK_IO,sense);
         break;
 
@@ -657,7 +658,6 @@ static void enter_low_power_mode(void)
 //        nrf_pwr_mgmt_run();
 //    }
     app_uart_close();
-    close_all_power();
     nrf_pwr_mgmt_shutdown(NRF_PWR_MGMT_SHUTDOWN_GOTO_SYSOFF);
 }
 void battery_level_meas_timeout_handler(void *p_context)
@@ -743,7 +743,7 @@ void m_1s_timeout_hander(void * p_context)
 
     if((one_second_counter%5) == 0)
     {
-        bat_level_to_st = get_battery_percent();        
+        bat_level_to_st = get_battery_percent();
     }
 
     if(one_second_counter >59)
@@ -1747,7 +1747,7 @@ void uart_event_handle(app_uart_evt_t * p_event)
                         switch (data_array[5])
                         {
                             case ST_SEND_CLOSE_SYS_PWR:
-                                pwr_status_flag = PWR_SHUTDOWN_SYS;                                
+                                pwr_status_flag = PWR_SHUTDOWN_SYS;
                                 break;
                             case ST_SEND_CLOSE_EMMC_PWR:
                                 pwr_status_flag = PWR_CLOSE_EMMC;                                
@@ -2048,13 +2048,10 @@ void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
             break;
         case POWER_IC_OK_IO:
             if(action == NRF_GPIOTE_POLARITY_LOTOHI){
-                open_all_power();
+                //open_all_power();
             }else if(action == NRF_GPIOTE_POLARITY_HITOLO){
-                nrf_delay_ms(10);
-                if(0 == nrf_gpio_pin_read(POWER_IC_OK_IO)){
-                    enter_low_power_mode();
-                }
-                
+                NRF_LOG_INFO("SET OFF LEVEL");
+                enter_low_power_mode();
             }   
             break;
         case POWER_IC_IRQ_IO:
@@ -2074,8 +2071,6 @@ void in_gpiote_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
                 bak_buff[0] = BLE_CMD_KEY_STA;
                 bak_buff[1] = g_key_status;
                 send_stm_data(bak_buff,2); 
-            }else if(g_key_status == 0x02){
-                g_offlevel_flag = true;
             }
             clear_irq_reg();
             break;
@@ -2101,9 +2096,9 @@ static void gpiote_init(void)
     APP_ERROR_CHECK(err_code);
     nrf_drv_gpiote_in_event_enable(SLAVE_SPI_RSP_IO, true);
     
-    // err_code = nrf_drv_gpiote_in_init(POWER_IC_OK_IO, &in_config, in_gpiote_handler);
-    // APP_ERROR_CHECK(err_code);
-    // nrf_drv_gpiote_in_event_enable(POWER_IC_OK_IO, true);
+    err_code = nrf_drv_gpiote_in_init(POWER_IC_OK_IO, &in_config1, in_gpiote_handler);
+    APP_ERROR_CHECK(err_code);
+    nrf_drv_gpiote_in_event_enable(POWER_IC_OK_IO, true);
     
     err_code = nrf_drv_gpiote_in_init(POWER_IC_IRQ_IO, &in_config1, in_gpiote_handler);
     APP_ERROR_CHECK(err_code);        
@@ -2337,11 +2332,6 @@ static void manage_bat_level(void *p_event_data,uint16_t event_size)
         bak_buff[1] = bat_level_to_st;
         send_stm_data(bak_buff,2);
     }
-    //
-    if(g_offlevel_flag == true)
-    {
-        g_offlevel_flag = false;
-    }
 }
 static void check_advertising_stop(void)
 {
@@ -2436,12 +2426,14 @@ static void ble_ctl_process(void *p_event_data,uint16_t event_size)
     switch (pwr_status_flag)
     {
     case PWR_SHUTDOWN_SYS:
+        pwr_status_flag = PWR_DEF;
 #ifdef UART_TRANS
         bak_buff[0] = BLE_CMD_PWR_STA;
         bak_buff[1] = BLE_CLOSE_SYSTEM;
         send_stm_data(bak_buff,2);
 #endif
-        enter_low_power_mode();
+        check_advertising_stop();
+        close_all_power();
         break;
     case PWR_CLOSE_EMMC:
         respons_flag = BLE_CLOSE_EMMC;

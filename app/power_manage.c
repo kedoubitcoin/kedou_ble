@@ -22,21 +22,20 @@ ret_code_t open_all_power(void)
 {
     ret_code_t ret;
 	uint8_t val=0;
-
-    //set ALDO3 3.3V
-    axp216_write(AXP_ALDO3OUT_VOL,0xff);
-
-    ret = axp216_write(AXP_LDO_DC_EN1,0xff);
-    nrf_delay_ms(100);
-    ret = axp216_read(AXP_LDO_DC_EN1,1,&val);
-    NRF_LOG_INFO("1---Read DC-reg val=%d",val);
-    nrf_delay_ms(100);
-
+    
     ret = axp216_write(AXP_LDO_DC_EN2,0xFF );
     nrf_delay_ms(100);  
     val = 0;
     ret = axp216_read(AXP_LDO_DC_EN2,1,&val);
     NRF_LOG_INFO("1---Read DC-reg val=%d",val);
+    nrf_delay_ms(100);
+
+    //set ALDO3 EMMC Value 3.2V
+    axp216_write(AXP_ALDO3OUT_VOL,0x1E);
+    //set DCDC1 Value 3.2V
+    axp216_write(AXP_DC1OUT_VOL,0x10);
+    //set LDO2 Value 3.2V
+    axp216_write(AXP_ALDO2OUT_VOL,0x10);
     nrf_delay_ms(100);
     return ret;
 }
