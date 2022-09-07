@@ -101,7 +101,7 @@
 #include "nrf_uarte.h"
 #endif
 
-#define MANUFACTURER_NAME               "Bixin"                                     /**< Manufacturer. Will be passed to Device Information Service. */
+#define MANUFACTURER_NAME               "OneKey"                                     /**< Manufacturer. Will be passed to Device Information Service. */
 #define ADV_HEAD_NAME                   "K"
 #define MODEL_NUMBER                    "one"                                       /**< Model Number string. Will be passed to Device Information Service. */
 #define MANUFACTURER_ID                 0x55AA55AA55                                /**< DUMMY Manufacturer ID. Will be passed to Device Information Service. You shall use the ID for your Company*/
