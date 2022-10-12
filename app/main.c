@@ -105,7 +105,7 @@
 #endif
 
 #define MANUFACTURER_NAME               "OneKey"                                     /**< Manufacturer. Will be passed to Device Information Service. */
-#define ADV_HEAD_NAME                   "T"
+#define ADV_HEAD_NAME                   "Touch "
 #define MODEL_NUMBER                    "Touch"                                       /**< Model Number string. Will be passed to Device Information Service. */
 #define MANUFACTURER_ID                 0x55AA55AA55                                /**< DUMMY Manufacturer ID. Will be passed to Device Information Service. You shall use the ID for your Company*/
 #define ORG_UNIQUE_ID                   0xEEBBEE                                    /**< DUMMY Organisation Unique ID. Will be passed to Device Information Service. You shall use the Organisation Unique ID relevant for your Company */
@@ -196,8 +196,8 @@
 #define SEC_PARAM_MAX_KEY_SIZE          16                                          /**< Maximum encryption key size. */
 
 #define PASSKEY_LENGTH                  6                                           /**< Length of pass-key received by the stack for display. */
-#define HEAD_NAME_LENGTH                1
-#define ADV_NAME_LENGTH                 5
+#define HEAD_NAME_LENGTH                6
+#define ADV_NAME_LENGTH                 10
 #define MAC_ADDRESS_LENGTH              6
 
 #define DEAD_BEEF                       0xDEADBEEF                                  /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
@@ -878,7 +878,6 @@ void mac_address_get(void)
 {
     ble_gap_addr_t  Mac_address;
     unsigned char i,j=0;
-    //_sd_ble_gap_addr_get(&Mac_address);
 
     uint32_t err_code = sd_ble_gap_addr_get(&Mac_address);
     APP_ERROR_CHECK(err_code);
@@ -893,9 +892,7 @@ void mac_address_get(void)
         }
         else
         {
-            mac_ascii[j]=0x31;
-            j++;
-            mac_ascii[j]=0x30+(mac[i]>>4)%0x0a;
+            mac_ascii[j]=0x41+((mac[i]>>4)&0x0f-0x0A);
             j++;
         }
 
@@ -906,9 +903,7 @@ void mac_address_get(void)
         }
         else
         {
-            mac_ascii[j]=0x31;
-            j++;
-            mac_ascii[j]=0x30+(mac[i]&0x0f)%0x0a;
+            mac_ascii[j]=0x41+(mac[i]&0x0f-0x0A);
             j++;
         }
     }    
@@ -936,7 +931,7 @@ static void gap_params_init(void)
 
     err_code = sd_ble_gap_device_name_set(&sec_mode,
                                           (const uint8_t *)ble_adv_name,
-                                          ADV_NAME_LENGTH);
+                                          strlen(ble_adv_name));
     APP_ERROR_CHECK(err_code);
 
     memset(&gap_conn_params, 0, sizeof(gap_conn_params));
@@ -1854,22 +1849,22 @@ static void advertising_init(void)
 {
     uint32_t               err_code;
     ble_advertising_init_t init;
-    ble_advdata_manuf_data_t   manuf_data;
+    // ble_advdata_manuf_data_t   manuf_data;
     uint8_t m_addl_adv_manuf_data[MAC_ADDRESS_LENGTH];
 
     memset(&init, 0, sizeof(init));
 
-    manuf_data.company_identifier = COMPANY_IDENTIFIER;
-    manuf_data.data.size          = ADV_ADDL_MANUF_DATA_LEN;
-    memcpy(m_addl_adv_manuf_data,mac,MAC_ADDRESS_LENGTH);
-    manuf_data.data.p_data        = m_addl_adv_manuf_data;
+    // manuf_data.company_identifier = COMPANY_IDENTIFIER;
+    // manuf_data.data.size          = ADV_ADDL_MANUF_DATA_LEN;
+    // memcpy(m_addl_adv_manuf_data,mac,MAC_ADDRESS_LENGTH);
+    // manuf_data.data.p_data        = m_addl_adv_manuf_data;
     
     init.advdata.name_type               = BLE_ADVDATA_FULL_NAME;
     init.advdata.include_appearance      = false;
     init.advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
     init.advdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
     init.advdata.uuids_complete.p_uuids  = m_adv_uuids;
-    init.advdata.p_manuf_specific_data = &manuf_data;
+    // init.advdata.p_manuf_specific_data = &manuf_data;
 
     init.config.ble_adv_fast_enabled  = true;
     init.config.ble_adv_fast_interval = APP_ADV_INTERVAL;
@@ -2517,7 +2512,6 @@ int main(void)
 #endif
     gap_params_init();
     gatt_init();
-    advertising_init();
     services_init();
     advertising_init();
     conn_params_init();
