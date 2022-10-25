@@ -110,7 +110,7 @@
 #define MANUFACTURER_ID                 0x55AA55AA55                                /**< DUMMY Manufacturer ID. Will be passed to Device Information Service. You shall use the ID for your Company*/
 #define ORG_UNIQUE_ID                   0xEEBBEE                                    /**< DUMMY Organisation Unique ID. Will be passed to Device Information Service. You shall use the Organisation Unique ID relevant for your Company */
 #define HW_REVISION                     "1.0.0"
-#define FW_REVISION                     "2.0.7"
+#define FW_REVISION                     "2.0.8"
 #define SW_REVISION                     "s132_nrf52_7.0.1"
 #define BT_REVISION                     "1.0.1"
 
@@ -2330,6 +2330,9 @@ static void manage_bat_level(void *p_event_data,uint16_t event_size)
 }
 static void check_advertising_stop(void)
 {
+    if(ble_status_flag == BLE_OFF_ALWAYS)
+        return;
+        
     if(ble_evt_flag != BLE_DISCONNECT || ble_evt_flag != BLE_DEFAULT)
     {
         sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);

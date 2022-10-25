@@ -24,13 +24,13 @@
 
 /*电池容量，mAh：根据实际电池容量来定义，对库仑计方法来说
 这个参数很重要，必须配置*/
-#define BATCAP				1280
+#define BATCAP				900
 
 /*初始化电池内阻，mΩ：一般在100~200之间，不过最好根据实际
 测试出来的确定，方法是打开打印信息，不接电池烧好固件后，
 上电池，不接充电器，开机，开机1分钟后，接上充电器，充
 1~2分钟，看打印信息中的rdc值，填入这里*/
-#define BATRDC				80
+#define BATRDC				150
 
 /*开路电压方法中的电池电压的缓存*/
 //#define AXP_VOL_MAX			1
@@ -45,7 +45,7 @@
 		AXP:300~2550,100/step
 */
 /*充电电流，uA*/
-#define STACHGCUR			4500*1000
+#define STACHGCUR			750*1000
 
 
 /*目标充电电压，mV*/
@@ -131,7 +131,7 @@
 /*
 	AXP:0-关闭，1-打开
 */
-#define USBVOLLIMEN		1
+#define USBVOLLIMEN		0
 /*  充电限压，mV，0为不限制*/
 /*
 	AXP:4000~4700，100/step
@@ -157,7 +157,7 @@
 /*
 	AXP:500/900
 */
-#define USBCURLIMPC			500
+#define USBCURLIMPC			900
 /* PMU 中断触发唤醒使能*/
 /*
 	AXP:0-不唤醒，1-唤醒
@@ -230,25 +230,25 @@
 #define OCVREG1				0		 			//3.27V
 #define OCVREG2				0		 			//3.34V
 #define OCVREG3				1		 			//3.41V
-#define OCVREG4				5		 			//3.48V
-#define OCVREG5				9		 			//3.52V
+#define OCVREG4				4		 			//3.48V
+#define OCVREG5				8		 			//3.52V
 #define OCVREG6				12		 			//3.55V
-#define OCVREG7				14		 			//3.57V
-#define OCVREG8				16		 			//3.59V
-#define OCVREG9				18		 			//3.61V
-#define OCVREGA				20		 			//3.63V
-#define OCVREGB				22		 			//3.64V
-#define OCVREGC				26		 			//3.66V
-#define OCVREGD				30		 			//3.7V
-#define OCVREGE				35		 			//3.73V
-#define OCVREGF				40		 			//3.77V
-#define OCVREG10		 	45                	//3.78V
-#define OCVREG11		 	50                	//3.8V
-#define OCVREG12		 	55                	//3.82V
-#define OCVREG13		 	60                	//3.84V
-#define OCVREG14		 	65                	//3.85V
-#define OCVREG15		 	70                	//3.87V
-#define OCVREG16		 	75                	//3.91V
+#define OCVREG7				16		 			//3.57V
+#define OCVREG8				20		 			//3.59V
+#define OCVREG9				22		 			//3.61V
+#define OCVREGA				26		 			//3.63V
+#define OCVREGB				30		 			//3.64V
+#define OCVREGC				35		 			//3.66V
+#define OCVREGD				40		 			//3.7V
+#define OCVREGE				44		 			//3.73V
+#define OCVREGF				48		 			//3.77V
+#define OCVREG10		 	52                	//3.78V
+#define OCVREG11		 	56                	//3.8V
+#define OCVREG12		 	60                	//3.82V
+#define OCVREG13		 	64                	//3.84V
+#define OCVREG14		 	68                	//3.85V
+#define OCVREG15		 	72                	//3.87V
+#define OCVREG16		 	76                	//3.91V
 #define OCVREG17		 	80                	//3.94V
 #define OCVREG18		 	83                	//3.98V
 #define OCVREG19		 	86                	//4.01V
