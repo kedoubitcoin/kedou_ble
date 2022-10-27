@@ -2329,10 +2329,7 @@ static void manage_bat_level(void *p_event_data,uint16_t event_size)
     }
 }
 static void check_advertising_stop(void)
-{
-    if(ble_status_flag == BLE_OFF_ALWAYS)
-        return;
-        
+{        
     if(ble_evt_flag != BLE_DISCONNECT || ble_evt_flag != BLE_DEFAULT)
     {
         sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
@@ -2430,7 +2427,10 @@ static void ble_ctl_process(void *p_event_data,uint16_t event_size)
         bak_buff[1] = BLE_CLOSE_SYSTEM;
         send_stm_data(bak_buff,2);
 #endif
-        check_advertising_stop();
+        if(ble_status_flag != BLE_OFF_ALWAYS)
+        {
+            check_advertising_stop();
+        }
         close_all_power();
         break;
     case PWR_CLOSE_EMMC:
