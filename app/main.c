@@ -663,15 +663,13 @@ static void enter_low_power_mode(void)
 void battery_level_meas_timeout_handler(void *p_context)
 {
     ret_code_t err_code;
-    static uint8_t battery_percent=0;
 
     UNUSED_PARAMETER(p_context);
-    if(battery_percent != bat_level_to_st)
+    if(bat_level_to_st<=100)
     {
-        battery_percent = bat_level_to_st;
         if(g_bas_update_flag == 1)
         {
-            err_code = ble_bas_battery_level_update(&m_bas, battery_percent, BLE_CONN_HANDLE_ALL);
+            err_code = ble_bas_battery_level_update(&m_bas, bat_level_to_st, BLE_CONN_HANDLE_ALL);
             if ((err_code != NRF_SUCCESS) &&
                 (err_code != NRF_ERROR_INVALID_STATE) &&
                 (err_code != NRF_ERROR_RESOURCES) &&
@@ -682,9 +680,6 @@ void battery_level_meas_timeout_handler(void *p_context)
             }
         }
     }
-
-    
-    
 }
 
 static volatile uint8_t timeout_count=0;
